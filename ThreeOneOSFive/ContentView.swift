@@ -1274,6 +1274,10 @@ struct ContentView: View {
             || (remote.map { patchStore.isRemotePatchActive($0) } ?? isPatchActive(packageFilename, targetBundleID: targetBundleID))
 
         if !wasEnabled {
+            if let remote, remoteProject == nil, EmbeddedAimPackageVault.isBuiltin(remote) {
+                patchStore.requestBuiltinUnlock(for: remote)
+                return
+            }
             guard projectID != nil else { return }
             if item == nil, remoteProject == nil { return }
         }
@@ -1508,11 +1512,21 @@ private struct PatchOptionCard: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(height: 20, alignment: .leading)
-                Text(isEnabled ? "INJECTED" : target)
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .tracking(0.8)
-                    .foregroundStyle(isEnabled ? Color.green : color.opacity(0.9))
-                    .frame(height: 12, alignment: .leading)
+                HStack(spacing: 6) {
+                    Text(isEnabled ? "INJECTED" : target)
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .tracking(0.8)
+                        .foregroundStyle(isEnabled ? Color.green : color.opacity(0.9))
+                        .frame(height: 12, alignment: .leading)
+                    Text(target)
+                        .font(.system(size: 8, weight: .black, design: .rounded))
+                        .tracking(0.6)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(color.opacity(0.24), in: Capsule())
+                        .overlay(Capsule().stroke(color.opacity(0.65), lineWidth: 0.8))
+                }
                 if !statusText.isEmpty {
                     Text(statusText)
                         .font(.system(size: 10, weight: .medium, design: .rounded))

@@ -1,0 +1,465 @@
+import Foundation
+
+struct PatchLibraryItem: Identifiable {
+    let summary: PatchPackageSummary
+    var project: PatchProject?
+    var contentKey: Data?
+    var packageURL: URL
+
+    var id: UUID { summary.packageID }
+    var isLocked: Bool { project == nil }
+    var displayName: String {
+        let filename = packageURL.deletingPathExtension().lastPathComponent
+        if filename.hasPrefix("BundledPatch-") {
+            return String(filename.dropFirst("BundledPatch-".count))
+        }
+        if filename.hasPrefix("xTop1 External File (") {
+            return filename
+        }
+        return project?.name ?? filename
+    }
+    var workspaceURL: URL? {
+        PatchWorkspaceService.workspaceURL(projectID: id)
+    }
+}
+
+struct PatchPasswordRequest: Identifiable {
+    let summary: PatchPackageSummary
+    var id: UUID { summary.packageID }
+}
+
+enum PatchProjectLibrary {
+    private static let bundledFilenamePrefix = "BundledPatch-"
+    private static let protectedStoreDirectory = ".7c91e4a2"
+    private static let storageMigrationLock = NSRecursiveLock()
+    private static var didMigrateLegacyPackages = false
+
+    static func packageRootURL(fileManager: FileManager = .default) throws -> URL {
+        storageMigrationLock.lock()
+        defer { storageMigrationLock.unlock() }
+        let documents = try fileManager.url(
+            for: .documentDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let applicationSupport = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let protectedRoot = applicationSupport.appendingPathComponent(
+            protectedStoreDirectory,
+            isDirectory: true
+        )
+        let root = protectedRoot.appendingPathComponent(".p", isDirectory: true)
+        try createProtectedDirectory(protectedRoot, fileManager: fileManager)
+        try createProtectedDirectory(root, fileManager: fileManager)
+        if !didMigrateLegacyPackages {
+            let legacyRoot = applicationSupport.appendingPathComponent("PatchProjects", isDirectory: true)
+            let oldProtectedRoot = applicationSupport.appendingPathComponent(
+                protectedStoreDirectory,
+                isDirectory: true
+            )
+            let oldPackageRoot = oldProtectedRoot.appendingPathComponent("p", isDirectory: true)
+            try migrateLegacyPackages(
+                from: [documents, legacyRoot, oldPackageRoot],
+                to: root,
+                fileManager: fileManager
+            )
+            try migrateLegacyBackupDirectories(
+                from: [
+                    documents.appendingPathComponent("Backups", isDirectory: true),
+                    oldPackageRoot.appendingPathComponent("Backups", isDirectory: true)
+                ],
+                to: root.appendingPathComponent("Backups", isDirectory: true),
+                fileManager: fileManager
+            )
+            if (try? fileManager.contentsOfDirectory(atPath: oldPackageRoot.path).isEmpty) == true {
+                try? fileManager.removeItem(at: oldPackageRoot)
+            }
+            didMigrateLegacyPackages = true
+        }
+        return root
+    }
+
+    static func remotePackageVaultURL(fileManager: FileManager = .default) throws -> URL {
+        let applicationSupport = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let protectedRoot = applicationSupport.appendingPathComponent(
+            protectedStoreDirectory,
+            isDirectory: true
+        )
+        let vaultRoot = protectedRoot.appendingPathComponent(".v", isDirectory: true)
+        try createProtectedDirectory(protectedRoot, fileManager: fileManager)
+        try createProtectedDirectory(vaultRoot, fileManager: fileManager)
+        return vaultRoot.appendingPathComponent(".cache", isDirectory: false)
+    }
+
+    private static func createProtectedDirectory(
+        _ url: URL,
+        fileManager: FileManager
+    ) throws {
+        try fileManager.createDirectory(
+            at: url,
+            withIntermediateDirectories: true,
+            attributes: [.protectionKey: FileProtectionType.complete]
+        )
+        try fileManager.setAttributes(
+            [.protectionKey: FileProtectionType.complete],
+            ofItemAtPath: url.path
+        )
+    }
+
+    private static func migrateLegacyPackages(
+        from roots: [URL],
+        to root: URL,
+        fileManager: FileManager
+    ) throws {
+        for legacyRoot in roots where legacyRoot.standardizedFileURL != root.standardizedFileURL {
+            guard fileManager.fileExists(atPath: legacyRoot.path) else { continue }
+            let packages = try fileManager.contentsOfDirectory(
+                at: legacyRoot,
+                includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
+                options: [.skipsHiddenFiles]
+            ).filter { $0.pathExtension.lowercased() == "3105" }
+
+            for source in packages {
+                let values = try source.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                guard values.isRegularFile == true, values.isSymbolicLink != true else { continue }
+                let base = source.deletingPathExtension().lastPathComponent
+                var destination = root.appendingPathComponent(source.lastPathComponent)
+                var suffix = 2
+                while fileManager.fileExists(atPath: destination.path) {
+                    destination = root.appendingPathComponent("\(base)-\(suffix).3105")
+                    suffix += 1
+                }
+                try fileManager.moveItem(at: source, to: destination)
+                try fileManager.setAttributes(
+                    [.protectionKey: FileProtectionType.complete],
+                    ofItemAtPath: destination.path
+                )
+            }
+        }
+    }
+
+    private static func migrateLegacyBackupDirectories(
+        from roots: [URL],
+        to destination: URL,
+        fileManager: FileManager
+    ) throws {
+        for source in roots where fileManager.fileExists(atPath: source.path) {
+            let sourceValues = try source.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+            guard sourceValues.isDirectory == true, sourceValues.isSymbolicLink != true else { continue }
+            if !fileManager.fileExists(atPath: destination.path) {
+                try fileManager.moveItem(at: source, to: destination)
+                try protectTree(at: destination, fileManager: fileManager)
+                continue
+            }
+
+            let projects = try fileManager.contentsOfDirectory(
+                at: source,
+                includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+                options: [.skipsHiddenFiles]
+            )
+            for projectSource in projects {
+                let values = try projectSource.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+                guard values.isDirectory == true, values.isSymbolicLink != true else { continue }
+                let projectDestination = destination.appendingPathComponent(
+                    projectSource.lastPathComponent,
+                    isDirectory: true
+                )
+                if !fileManager.fileExists(atPath: projectDestination.path) {
+                    try fileManager.moveItem(at: projectSource, to: projectDestination)
+                    try protectTree(at: projectDestination, fileManager: fileManager)
+                    continue
+                }
+
+                let transactions = try fileManager.contentsOfDirectory(
+                    at: projectSource,
+                    includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+                    options: [.skipsHiddenFiles]
+                )
+                for transaction in transactions {
+                    let values = try transaction.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+                    guard values.isDirectory == true, values.isSymbolicLink != true else { continue }
+                    let transactionDestination = projectDestination.appendingPathComponent(
+                        transaction.lastPathComponent,
+                        isDirectory: true
+                    )
+                    guard !fileManager.fileExists(atPath: transactionDestination.path) else { continue }
+                    try fileManager.moveItem(at: transaction, to: transactionDestination)
+                    try protectTree(at: transactionDestination, fileManager: fileManager)
+                }
+                if (try? fileManager.contentsOfDirectory(atPath: projectSource.path).isEmpty) == true {
+                    try? fileManager.removeItem(at: projectSource)
+                }
+            }
+            if (try? fileManager.contentsOfDirectory(atPath: source.path).isEmpty) == true {
+                try? fileManager.removeItem(at: source)
+            }
+        }
+    }
+
+    private static func protectTree(
+        at root: URL,
+        fileManager: FileManager
+    ) throws {
+        let rootValues = try root.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        guard rootValues.isSymbolicLink != true else { return }
+        try fileManager.setAttributes(
+            [.protectionKey: FileProtectionType.complete],
+            ofItemAtPath: root.path
+        )
+        guard rootValues.isDirectory == true,
+              let enumerator = fileManager.enumerator(
+                at: root,
+                includingPropertiesForKeys: [.isSymbolicLinkKey],
+                options: [],
+                errorHandler: { _, _ in false }
+              ) else { return }
+        while let child = enumerator.nextObject() as? URL {
+            let values = try child.resourceValues(forKeys: [.isSymbolicLinkKey])
+            guard values.isSymbolicLink != true else {
+                enumerator.skipDescendants()
+                continue
+            }
+            try fileManager.setAttributes(
+                [.protectionKey: FileProtectionType.complete],
+                ofItemAtPath: child.path
+            )
+        }
+    }
+
+    static func backupRootURL(fileManager: FileManager = .default) throws -> URL {
+        let root = try packageRootURL(fileManager: fileManager)
+            .appendingPathComponent("Backups", isDirectory: true)
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true,
+            attributes: [.protectionKey: FileProtectionType.complete]
+        )
+        try fileManager.setAttributes(
+            [.protectionKey: FileProtectionType.complete],
+            ofItemAtPath: root.path
+        )
+        return root
+    }
+
+    static func removeBundledPackagesIfNeeded(
+        fileManager: FileManager = .default
+    ) {
+        guard let root = try? packageRootURL(fileManager: fileManager),
+              let urls = try? fileManager.contentsOfDirectory(
+                at: root,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+              ) else { return }
+        for url in urls where url.pathExtension.lowercased() == "3105" &&
+            url.deletingPathExtension().lastPathComponent.hasPrefix(bundledFilenamePrefix) {
+            try? fileManager.removeItem(at: url)
+        }
+    }
+
+    static func load(fileManager: FileManager = .default) -> [PatchLibraryItem] {
+        guard let root = try? packageRootURL(fileManager: fileManager),
+              let urls = try? fileManager.contentsOfDirectory(
+                at: root,
+                includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
+                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+              ) else { return [] }
+
+        // Normal and Max archives intentionally share package IDs, but they
+        // are different resources and must both remain selectable. Key the
+        // in-memory catalog by the persisted filename instead of package UUID.
+        var byPackagePath: [String: PatchLibraryItem] = [:]
+        for url in urls where url.pathExtension.lowercased() == "3105" {
+            do {
+                let data = try readPackage(at: url)
+                let summary = try PatchPackageCodec.inspect(data)
+                let decoded: DecodedPatchPackage?
+                if let contentKey = try PatchKeyStore.load(for: summary),
+                   let known = try? PatchPackageCodec.decode(data, contentKey: contentKey) {
+                    decoded = known
+                } else if summary.isPasswordProtected {
+                    // Password-protected packages stay locked until the user
+                    // supplies the password. No built-in password exists.
+                    decoded = nil
+                    let item = PatchLibraryItem(
+                        summary: summary,
+                        project: nil,
+                        contentKey: nil,
+                        packageURL: url
+                    )
+                    byPackagePath[url.standardizedFileURL.path] = item
+                    continue
+                } else {
+                    decoded = try PatchPackageCodec.decode(data, password: nil)
+                }
+                let item = PatchLibraryItem(
+                    summary: summary,
+                    project: decoded?.project,
+                    contentKey: decoded?.contentKey,
+                    packageURL: url
+                )
+                if summary.schemaVersion >= 2, let project = decoded?.project {
+                    do {
+                        _ = try PatchWorkspaceService.ensureWorkspace(for: project)
+                    } catch {
+                        log("patch: workspace unavailable for \(project.id.uuidString)")
+                    }
+                }
+                byPackagePath[url.standardizedFileURL.path] = item
+            } catch {
+                log("patch: skipped invalid local package \(url.lastPathComponent)")
+            }
+        }
+        return byPackagePath.values.sorted {
+            ($0.project?.updatedAt ?? .distantPast) > ($1.project?.updatedAt ?? .distantPast)
+        }
+    }
+
+    static func readPackage(at url: URL) throws -> Data {
+        let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
+        guard values.isDirectory != true,
+              values.isSymbolicLink != true,
+              values.isRegularFile == true else {
+            throw PatchPackageError.invalidProject
+        }
+        return try Data(contentsOf: url, options: .mappedIfSafe)
+    }
+
+    static func save(
+        data: Data,
+        projectName: String,
+        existingURL: URL? = nil,
+        fileManager: FileManager = .default
+    ) throws -> URL {
+        let destination: URL
+        if let existingURL {
+            destination = existingURL
+        } else {
+            let root = try packageRootURL(fileManager: fileManager)
+            let baseName = sanitizedFilename(projectName)
+            var candidate = root.appendingPathComponent(baseName).appendingPathExtension("3105")
+            var suffix = 2
+            while fileManager.fileExists(atPath: candidate.path) {
+                candidate = root.appendingPathComponent("\(baseName)-\(suffix)").appendingPathExtension("3105")
+                suffix += 1
+            }
+            destination = candidate
+        }
+        try data.write(to: destination, options: [.atomic, .completeFileProtection])
+        return destination
+    }
+
+    static func installImportedPackage(
+        data: Data,
+        decoded: DecodedPatchPackage,
+        summary: PatchPackageSummary,
+        existingURL: URL?,
+        fileManager: FileManager = .default
+    ) throws {
+        let previousData = try existingURL.map { try readPackage(at: $0) }
+        var savedURL: URL?
+        do {
+            savedURL = try save(
+                data: data,
+                projectName: decoded.project.name,
+                existingURL: existingURL,
+                fileManager: fileManager
+            )
+            if summary.schemaVersion >= 2 {
+                _ = try PatchWorkspaceService.replaceWorkspace(
+                    with: decoded.project,
+                    fileManager: fileManager
+                )
+            } else {
+                try? PatchWorkspaceService.deleteWorkspace(
+                    projectID: decoded.project.id,
+                    fileManager: fileManager
+                )
+            }
+        } catch {
+            if let previousData, let existingURL {
+                try? previousData.write(
+                    to: existingURL,
+                    options: [.atomic, .completeFileProtection]
+                )
+            } else if let savedURL, fileManager.fileExists(atPath: savedURL.path) {
+                try? fileManager.removeItem(at: savedURL)
+            }
+            throw error
+        }
+    }
+
+    static func delete(_ item: PatchLibraryItem, fileManager: FileManager = .default) throws {
+        if fileManager.fileExists(atPath: item.packageURL.path) {
+            try fileManager.removeItem(at: item.packageURL)
+        }
+        try? PatchWorkspaceService.deleteWorkspace(projectID: item.id, fileManager: fileManager)
+        try? PatchKeyStore.delete(for: item.summary)
+    }
+
+    static func removePackageFileOnly(
+        _ item: PatchLibraryItem,
+        fileManager: FileManager = .default
+    ) throws {
+        if fileManager.fileExists(atPath: item.packageURL.path) {
+            try fileManager.removeItem(at: item.packageURL)
+        }
+        try? PatchKeyStore.delete(for: item.summary)
+    }
+
+    static func synchronizeWorkspace(
+        item: PatchLibraryItem,
+        fileManager: FileManager = .default
+    ) throws -> PatchProject {
+        guard item.summary.schemaVersion >= 2,
+              let baseProject = item.project,
+              let contentKey = item.contentKey else {
+            throw PatchPackageError.invalidProject
+        }
+        let workspace = try PatchWorkspaceService.ensureWorkspace(
+            for: baseProject,
+            fileManager: fileManager
+        )
+        let project = try PatchWorkspaceService.snapshot(
+            baseProject: baseProject,
+            workspaceURL: workspace,
+            fileManager: fileManager
+        )
+        let original = try readPackage(at: item.packageURL)
+        let updated = try PatchPackageCodec.update(
+            original,
+            project: project,
+            contentKey: contentKey,
+            schemaVersion: PatchPackageCodec.latestSchemaVersion
+        )
+        _ = try save(
+            data: updated,
+            projectName: project.name,
+            existingURL: item.packageURL,
+            fileManager: fileManager
+        )
+        return project
+    }
+
+    private static func sanitizedFilename(_ rawName: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_ "))
+        let scalars = rawName.unicodeScalars.map { allowed.contains($0) ? Character(String($0)) : "-" }
+        let result = String(scalars)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .prefix(80)
+        return result.isEmpty ? "Patch" : String(result)
+    }
+
+    static func sanitizedPackageFilename(_ projectName: String) -> String {
+        sanitizedFilename(projectName) + ".3105"
+    }
+}

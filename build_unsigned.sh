@@ -39,6 +39,8 @@ fi
 echo "Verified no bundled local patch resources; patches are loaded only from VesperDash online."
 
 /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable @rybkx" "$APP/Info.plist" || true
+/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName WALTER X CHEAT" "$APP/Info.plist" || true
+/usr/libexec/PlistBuddy -c "Set :CFBundleName WALTER X CHEAT" "$APP/Info.plist" || true
 /usr/libexec/PlistBuddy -c "Set :CFBundlePackageType APPL" "$APP/Info.plist" || true
 python3 - "$APP/Info.plist" <<'PY'
 import base64

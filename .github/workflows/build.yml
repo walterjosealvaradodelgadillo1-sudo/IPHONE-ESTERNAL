@@ -140,8 +140,9 @@ jobs:
       - name: Upload WALTER X CHEAT IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WALTER-X-CHEAT-unsigned-ipa
+          name: WALTER-X-CHEAT-V2-ipa
           path: |
+            build/WALTER-X-CHEAT-V2.ipa
             build/WALTER-X-CHEAT-unsigned.ipa
             build/VESPER-Build-49-unsigned.ipa
           if-no-files-found: error
@@ -150,9 +151,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="walter-x-cheat-build-${GITHUB_RUN_ID}"
-          gh release create "$TAG" build/WALTER-X-CHEAT-unsigned.ipa build/VESPER-Build-49-unsigned.ipa \
+          TAG="walter-x-cheat-v2-build-${GITHUB_RUN_ID}"
+          gh release create "$TAG" build/WALTER-X-CHEAT-V2.ipa build/WALTER-X-CHEAT-unsigned.ipa build/VESPER-Build-49-unsigned.ipa \
             --repo "$GITHUB_REPOSITORY" \
-            --title "WALTER X CHEAT Build ${GITHUB_RUN_ID}" \
-            --notes "Unsigned WALTER X CHEAT (KeyAuth EXTERNAL IPHONE) IPA built from ${GITHUB_SHA}." \
+            --title "WALTER X CHEAT V2 Build ${GITHUB_RUN_ID}" \
+            --notes "Unsigned WALTER X CHEAT V2 (Cuello - Antena + Ultra-Safe Original File Restore) IPA built from ${GITHUB_SHA}." \
             --target "$GITHUB_SHA"

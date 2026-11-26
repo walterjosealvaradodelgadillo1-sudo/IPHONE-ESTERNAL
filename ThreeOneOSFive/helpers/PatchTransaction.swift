@@ -58,6 +58,17 @@ enum PatchTransaction {
 
     private static let schemaVersion = 1
     private static let journalFilename = "journal.plist"
+    private static let originalVaultDirectoryName = "OriginalVault"
+
+    private struct OriginalVaultMetadata: Codable {
+        let bundleID: String
+        let relativePath: String
+        var originalExisted: Bool
+        var originalDigest: Data?
+        var posixPermissions: Int?
+        var protectionType: String?
+        var knownReplacementDigests: [Data]
+    }
 
     static func apply(
         project: PatchProject,
@@ -170,12 +181,22 @@ enum PatchTransaction {
         }
         do {
             for resolved in resolvedRules {
-                let existed = fileManager.fileExists(atPath: resolved.target.path)
+                let replacementDigest = digest(resolved.rule.replacementData)
+                let vaultEntry = try captureOriginalInVaultIfNeeded(
+                    bundleID: resolved.rule.bundleID,
+                    relativePath: resolved.rule.relativePath,
+                    targetURL: resolved.target,
+                    replacementDigest: replacementDigest,
+                    backupRoot: backupRoot,
+                    fileManager: fileManager
+                )
+                let existed = vaultEntry.originalExisted
                 let backupFilename = existed ? "\(resolved.rule.id.uuidString).original" : nil
                 var originalDigest: Data?
                 if let backupFilename {
                     let backupURL = transactionDirectory.appendingPathComponent(backupFilename)
-                    try fileManager.copyItem(at: resolved.target, to: backupURL)
+                    let sourceForBackup = vaultEntry.originalFileURL ?? resolved.target
+                    try fileManager.copyItem(at: sourceForBackup, to: backupURL)
                     try fileManager.setAttributes(
                         [.protectionKey: FileProtectionType.complete],
                         ofItemAtPath: backupURL.path
@@ -190,7 +211,7 @@ enum PatchTransaction {
                     originalExisted: existed,
                     backupFilename: backupFilename,
                     originalDigest: originalDigest,
-                    replacementDigest: digest(resolved.rule.replacementData)
+                    replacementDigest: replacementDigest
                 ))
             }
         } catch let error as PatchPackageError {
@@ -283,16 +304,17 @@ enum PatchTransaction {
         do {
             for record in journal.records where roots[record.bundleID] == nil {
                 let root = PatchPathValidator.canonicalFileURL(try containerResolver(record.bundleID))
-                guard containerFingerprint(root) == record.containerFingerprint else {
-                    throw PatchPackageError.restoreFailed
-                }
                 roots[record.bundleID] = root
+            }
+            for directory in (journal.createdDirectories ?? []) where roots[directory.bundleID] == nil {
+                let root = PatchPathValidator.canonicalFileURL(try containerResolver(directory.bundleID))
+                roots[directory.bundleID] = root
             }
             try restoreRecords(
                 journal.records,
                 transactionDirectory: receipt.journalURL.deletingLastPathComponent(),
                 roots: roots,
-                requirePatchedDigest: journal.status == .applied,
+                requirePatchedDigest: false,
                 createdDirectories: journal.createdDirectories ?? [],
                 fileManager: fileManager
             )
@@ -301,6 +323,151 @@ enum PatchTransaction {
         } catch {
             throw PatchPackageError.restoreFailed
         }
+    }
+
+    static func allActiveReceipts(
+        projectID: UUID?,
+        backupRoot: URL,
+        targetBundleID: String? = nil,
+        targetRelativePaths: Set<String> = [],
+        fileManager: FileManager = .default
+    ) -> [PatchTransactionReceipt] {
+        var projectDirectories: [URL] = []
+        if let projectID {
+            let direct = backupRoot.appendingPathComponent(projectID.uuidString, isDirectory: true)
+            if fileManager.fileExists(atPath: direct.path) {
+                projectDirectories.append(direct)
+            }
+        }
+        if !targetRelativePaths.isEmpty || projectDirectories.isEmpty {
+            let allDirs = (try? fileManager.contentsOfDirectory(
+                at: backupRoot,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            )) ?? []
+            for dir in allDirs where dir.lastPathComponent != originalVaultDirectoryName {
+                if !projectDirectories.contains(where: { $0.standardizedFileURL == dir.standardizedFileURL }) {
+                    projectDirectories.append(dir)
+                }
+            }
+        }
+
+        let canonicalRequestedPaths = Set(
+            targetRelativePaths.compactMap { try? PatchPathValidator.canonicalRelativePath($0) }
+        )
+
+        var matches: [(Journal, URL)] = []
+        var seenTransactions = Set<UUID>()
+        for projectDirectory in projectDirectories {
+            guard let directories = try? fileManager.contentsOfDirectory(
+                at: projectDirectory,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+
+            for directory in directories {
+                let url = directory.appendingPathComponent(journalFilename)
+                guard let journal = try? readJournal(url),
+                      journal.status == .applied || journal.status == .prepared else { continue }
+                if let targetBundleID {
+                    let bundleIDs = journal.records.map(\.bundleID)
+                        + (journal.createdDirectories ?? []).map(\.bundleID)
+                    guard bundleIDs.contains(targetBundleID) else { continue }
+                }
+                let matchesProject = (projectID != nil && journal.projectID == projectID)
+                let matchesPath = !canonicalRequestedPaths.isEmpty && journal.records.contains { record in
+                    if let targetBundleID, record.bundleID != targetBundleID { return false }
+                    let recordPath = (try? PatchPathValidator.canonicalRelativePath(record.relativePath)) ?? record.relativePath
+                    return canonicalRequestedPaths.contains(recordPath)
+                }
+                guard matchesProject || matchesPath else { continue }
+                if seenTransactions.insert(journal.transactionID).inserted {
+                    matches.append((journal, url))
+                }
+            }
+        }
+
+        return matches
+            .sorted { $0.0.createdAt > $1.0.createdAt }
+            .map {
+                PatchTransactionReceipt(
+                    id: $0.0.transactionID,
+                    projectID: $0.0.projectID,
+                    journalURL: $0.1
+                )
+            }
+    }
+
+    @discardableResult
+    static func ensureOriginalsRestored(
+        bundleID: String,
+        relativePaths: [String],
+        backupRoot: URL,
+        containerRoot: URL,
+        fileManager: FileManager = .default
+    ) throws -> Int {
+        let root = PatchPathValidator.canonicalFileURL(containerRoot)
+        let vaultDir = try originalVaultDirectory(backupRoot: backupRoot, fileManager: fileManager)
+        var restoredCount = 0
+        var uniquePaths: [String] = []
+        var seen = Set<String>()
+        for rawPath in relativePaths {
+            guard let canonical = try? PatchPathValidator.canonicalRelativePath(rawPath),
+                  seen.insert(canonical).inserted else { continue }
+            uniquePaths.append(canonical)
+        }
+
+        for relativePath in uniquePaths {
+            let key = vaultKey(bundleID: bundleID, relativePath: relativePath)
+            let metaURL = vaultDir.appendingPathComponent("\(key).plist")
+            let origURL = vaultDir.appendingPathComponent("\(key).original")
+            guard fileManager.fileExists(atPath: metaURL.path),
+                  let metaData = try? Data(contentsOf: metaURL),
+                  let meta = try? PropertyListDecoder().decode(OriginalVaultMetadata.self, from: metaData),
+                  let target = try? PatchPathValidator.resolveContainedTargetURL(
+                    relativePath: relativePath,
+                    containerRoot: root
+                  ) else {
+                continue
+            }
+
+            if meta.originalExisted {
+                guard fileManager.fileExists(atPath: origURL.path) else { continue }
+                let expectedDigest = meta.originalDigest ?? (try? digestFile(origURL))
+                let currentDigest = fileManager.fileExists(atPath: target.path)
+                    ? (try? digestFile(target))
+                    : nil
+                if currentDigest != expectedDigest || currentDigest == nil {
+                    let parentDir = target.deletingLastPathComponent()
+                    if !fileManager.fileExists(atPath: parentDir.path) {
+                        try? fileManager.createDirectory(
+                            at: parentDir,
+                            withIntermediateDirectories: true
+                        )
+                    }
+                    try atomicCopy(
+                        origURL,
+                        to: target,
+                        fallbackPermissions: meta.posixPermissions,
+                        fallbackProtection: meta.protectionType,
+                        fileManager: fileManager
+                    )
+                    if let expectedDigest {
+                        guard try digestFile(target) == expectedDigest else {
+                            throw PatchPackageError.restoreFailed
+                        }
+                    }
+                    restoredCount += 1
+                }
+            } else if fileManager.fileExists(atPath: target.path) {
+                if let currentDigest = try? digestFile(target),
+                   meta.knownReplacementDigests.isEmpty || meta.knownReplacementDigests.contains(currentDigest) {
+                    try? fileManager.removeItem(at: target)
+                    restoredCount += 1
+                }
+            }
+        }
+        return restoredCount
     }
 
     static func discardBackup(
@@ -379,10 +546,14 @@ enum PatchTransaction {
         createdDirectories: [DirectoryRecord],
         fileManager: FileManager
     ) throws {
-        var resolvedTargets: [(Record, URL)] = []
+        let backupRoot = transactionDirectory
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let vaultDir = try? originalVaultDirectory(backupRoot: backupRoot, fileManager: fileManager)
+
+        var resolvedTargets: [(Record, URL, URL?, Data?, OriginalVaultMetadata?)] = []
         for record in records {
-            guard let root = roots[record.bundleID],
-                  containerFingerprint(root) == record.containerFingerprint else {
+            guard let root = roots[record.bundleID] else {
                 throw PatchPackageError.restoreFailed
             }
             let target = try PatchPathValidator.resolveContainedTargetURL(
@@ -393,46 +564,110 @@ enum PatchTransaction {
                 target,
                 relativePath: record.relativePath,
                 containerRoot: root,
-                allowMissingParents: !requirePatchedDigest,
+                allowMissingParents: true,
                 fileManager: fileManager
             )
 
-            let targetExists = fileManager.fileExists(atPath: target.path)
-            if requirePatchedDigest, targetExists {
-                let targetDigest = try digestFile(target)
-                let targetMatchesReplacement = targetDigest == record.replacementDigest
-                let targetMatchesOriginal = record.originalExisted && targetDigest == record.originalDigest
-                guard targetMatchesReplacement || targetMatchesOriginal else {
-                    throw PatchPackageError.restoreFailed
+            let canonicalPath = (try? PatchPathValidator.canonicalRelativePath(record.relativePath)) ?? record.relativePath
+            let key = vaultKey(bundleID: record.bundleID, relativePath: canonicalPath)
+            var vaultMeta: OriginalVaultMetadata?
+            var vaultOrigURL: URL?
+            if let vaultDir {
+                let metaURL = vaultDir.appendingPathComponent("\(key).plist")
+                let candidateOrigURL = vaultDir.appendingPathComponent("\(key).original")
+                if let metaData = try? Data(contentsOf: metaURL),
+                   let decodedMeta = try? PropertyListDecoder().decode(OriginalVaultMetadata.self, from: metaData) {
+                    vaultMeta = decodedMeta
+                    if decodedMeta.originalExisted,
+                       fileManager.fileExists(atPath: candidateOrigURL.path),
+                       let vaultDigest = try? digestFile(candidateOrigURL),
+                       vaultDigest != record.replacementDigest,
+                       (decodedMeta.originalDigest == nil || vaultDigest == decodedMeta.originalDigest) {
+                        vaultOrigURL = candidateOrigURL
+                    }
                 }
             }
-            if record.originalExisted {
-                guard let backupFilename = record.backupFilename,
-                      let expectedDigest = record.originalDigest else {
-                    throw PatchPackageError.restoreFailed
-                }
-                let backup = transactionDirectory.appendingPathComponent(backupFilename)
-                guard fileManager.fileExists(atPath: backup.path),
-                      try digestFile(backup) == expectedDigest else {
-                    throw PatchPackageError.restoreFailed
+
+            var chosenBackupURL: URL?
+            var expectedOriginalDigest: Data?
+
+            if let vaultOrigURL {
+                chosenBackupURL = vaultOrigURL
+                expectedOriginalDigest = vaultMeta?.originalDigest ?? (try? digestFile(vaultOrigURL))
+            } else if record.originalExisted, let backupFilename = record.backupFilename {
+                let txBackup = transactionDirectory.appendingPathComponent(backupFilename)
+                if fileManager.fileExists(atPath: txBackup.path),
+                   let txDigest = try? digestFile(txBackup) {
+                    if let expected = record.originalDigest, txDigest == expected {
+                        chosenBackupURL = txBackup
+                        expectedOriginalDigest = expected
+                    } else if record.originalDigest == nil {
+                        chosenBackupURL = txBackup
+                        expectedOriginalDigest = txDigest
+                    }
+                    // Seed OriginalVault from legacy authentic transaction backup if needed
+                    if let vaultDir,
+                       txDigest != record.replacementDigest,
+                       vaultOrigURL == nil {
+                        let seedOrigURL = vaultDir.appendingPathComponent("\(key).original")
+                        let seedMetaURL = vaultDir.appendingPathComponent("\(key).plist")
+                        if !fileManager.fileExists(atPath: seedOrigURL.path) {
+                            try? fileManager.copyItem(at: txBackup, to: seedOrigURL)
+                            try? fileManager.setAttributes(
+                                [.protectionKey: FileProtectionType.complete],
+                                ofItemAtPath: seedOrigURL.path
+                            )
+                            let seededMeta = OriginalVaultMetadata(
+                                bundleID: record.bundleID,
+                                relativePath: canonicalPath,
+                                originalExisted: true,
+                                originalDigest: txDigest,
+                                posixPermissions: 0o644,
+                                protectionType: FileProtectionType.completeUntilFirstUserAuthentication.rawValue,
+                                knownReplacementDigests: [record.replacementDigest]
+                            )
+                            if let encoded = try? PropertyListEncoder().encode(seededMeta) {
+                                try? encoded.write(to: seedMetaURL, options: .atomic)
+                            }
+                        }
+                    }
                 }
             }
-            resolvedTargets.append((record, target))
+
+            let shouldRestoreOriginalFile = (vaultMeta?.originalExisted ?? record.originalExisted)
+            if shouldRestoreOriginalFile, chosenBackupURL == nil {
+                throw PatchPackageError.restoreFailed
+            }
+            resolvedTargets.append((record, target, chosenBackupURL, expectedOriginalDigest, vaultMeta))
         }
 
-        for (record, target) in resolvedTargets.reversed() {
-            if record.originalExisted {
-                let backup = transactionDirectory.appendingPathComponent(record.backupFilename!)
-                try atomicCopy(backup, to: target, fileManager: fileManager)
+        for (record, target, chosenBackupURL, expectedOriginalDigest, vaultMeta) in resolvedTargets.reversed() {
+            let shouldRestoreOriginalFile = (vaultMeta?.originalExisted ?? record.originalExisted)
+            if shouldRestoreOriginalFile, let backup = chosenBackupURL {
+                let parentDir = target.deletingLastPathComponent()
+                if !fileManager.fileExists(atPath: parentDir.path) {
+                    try fileManager.createDirectory(at: parentDir, withIntermediateDirectories: true)
+                }
+                try atomicCopy(
+                    backup,
+                    to: target,
+                    fallbackPermissions: vaultMeta?.posixPermissions,
+                    fallbackProtection: vaultMeta?.protectionType,
+                    fileManager: fileManager
+                )
+                if let expectedOriginalDigest {
+                    guard try digestFile(target) == expectedOriginalDigest else {
+                        throw PatchPackageError.restoreFailed
+                    }
+                }
             } else if fileManager.fileExists(atPath: target.path) {
                 try fileManager.removeItem(at: target)
             }
         }
 
         for directory in createdDirectories.reversed() {
-            guard let root = roots[directory.bundleID],
-                  containerFingerprint(root) == directory.containerFingerprint else {
-                throw PatchPackageError.restoreFailed
+            guard let root = roots[directory.bundleID] else {
+                continue
             }
             let target = try PatchPathValidator.resolveContainedTargetURL(
                 relativePath: directory.relativePath,
@@ -441,11 +676,11 @@ enum PatchTransaction {
             guard fileManager.fileExists(atPath: target.path) else { continue }
             let values = try target.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
             guard values.isSymbolicLink != true, values.isDirectory == true else {
-                throw PatchPackageError.restoreFailed
+                continue
             }
-            let contents = try fileManager.contentsOfDirectory(atPath: target.path)
+            let contents = (try? fileManager.contentsOfDirectory(atPath: target.path)) ?? []
             if contents.isEmpty {
-                try fileManager.removeItem(at: target)
+                try? fileManager.removeItem(at: target)
             }
         }
     }
@@ -549,17 +784,249 @@ enum PatchTransaction {
     private static func atomicCopy(
         _ source: URL,
         to target: URL,
+        fallbackPermissions: Int? = nil,
+        fallbackProtection: String? = nil,
         fileManager: FileManager
     ) throws {
         let staging = target.deletingLastPathComponent()
             .appendingPathComponent(".3105-restore-\(UUID().uuidString)")
         defer { try? fileManager.removeItem(at: staging) }
+        var preservedAttributes: [FileAttributeKey: Any] = [:]
+        if let current = try? fileManager.attributesOfItem(atPath: target.path) {
+            if let permissions = current[.posixPermissions] {
+                preservedAttributes[.posixPermissions] = permissions
+            }
+            if let protection = current[.protectionKey] {
+                preservedAttributes[.protectionKey] = protection
+            }
+        }
+        if preservedAttributes[.posixPermissions] == nil {
+            preservedAttributes[.posixPermissions] = NSNumber(value: fallbackPermissions ?? 0o644)
+        }
+        if preservedAttributes[.protectionKey] == nil {
+            let rawProtection = fallbackProtection ?? FileProtectionType.completeUntilFirstUserAuthentication.rawValue
+            preservedAttributes[.protectionKey] = FileProtectionType(rawValue: rawProtection)
+        }
         try fileManager.copyItem(at: source, to: staging)
+        try? fileManager.setAttributes(preservedAttributes, ofItemAtPath: staging.path)
         let handle = try FileHandle(forWritingTo: staging)
         try handle.synchronize()
         try handle.close()
-        guard rename(staging.path, target.path) == 0 else {
-            throw PatchPackageError.restoreFailed
+        if rename(staging.path, target.path) != 0 {
+            if fileManager.fileExists(atPath: target.path) {
+                try? fileManager.removeItem(at: target)
+            }
+            guard rename(staging.path, target.path) == 0 else {
+                throw PatchPackageError.restoreFailed
+            }
+        }
+        try? fileManager.setAttributes(preservedAttributes, ofItemAtPath: target.path)
+    }
+
+    private static func originalVaultDirectory(
+        backupRoot: URL,
+        fileManager: FileManager
+    ) throws -> URL {
+        let vaultDir = backupRoot.appendingPathComponent(originalVaultDirectoryName, isDirectory: true)
+        if !fileManager.fileExists(atPath: vaultDir.path) {
+            try fileManager.createDirectory(
+                at: vaultDir,
+                withIntermediateDirectories: true,
+                attributes: [.protectionKey: FileProtectionType.complete]
+            )
+        }
+        return vaultDir
+    }
+
+    private static func vaultKey(bundleID: String, relativePath: String) -> String {
+        let canonical = (try? PatchPathValidator.canonicalRelativePath(relativePath)) ?? relativePath
+        let raw = Data("\(bundleID.lowercased())::\(canonical)".utf8)
+        return SHA256.hash(data: raw).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func captureOriginalInVaultIfNeeded(
+        bundleID: String,
+        relativePath: String,
+        targetURL: URL,
+        replacementDigest: Data,
+        backupRoot: URL,
+        fileManager: FileManager
+    ) throws -> (originalExisted: Bool, originalFileURL: URL?, originalDigest: Data?) {
+        let canonicalPath = try PatchPathValidator.canonicalRelativePath(relativePath)
+        let vaultDir = try originalVaultDirectory(backupRoot: backupRoot, fileManager: fileManager)
+        let key = vaultKey(bundleID: bundleID, relativePath: canonicalPath)
+        let metaURL = vaultDir.appendingPathComponent("\(key).plist")
+        let origURL = vaultDir.appendingPathComponent("\(key).original")
+
+        let existingMeta: OriginalVaultMetadata? = {
+            guard fileManager.fileExists(atPath: metaURL.path),
+                  let data = try? Data(contentsOf: metaURL) else { return nil }
+            return try? PropertyListDecoder().decode(OriginalVaultMetadata.self, from: data)
+        }()
+
+        let targetExists = fileManager.fileExists(atPath: targetURL.path)
+        let diskDigest = targetExists ? (try? digestFile(targetURL)) : nil
+
+        let activeReceiptsForPath = allActiveReceipts(
+            projectID: nil,
+            backupRoot: backupRoot,
+            targetBundleID: bundleID,
+            targetRelativePaths: [canonicalPath],
+            fileManager: fileManager
+        )
+
+        let diskMatchesKnownReplacement: Bool = {
+            guard let diskDigest else { return false }
+            if diskDigest == replacementDigest { return true }
+            if existingMeta?.knownReplacementDigests.contains(diskDigest) == true { return true }
+            for receipt in activeReceiptsForPath {
+                if let journal = try? readJournal(receipt.journalURL),
+                   journal.records.contains(where: { $0.replacementDigest == diskDigest }) {
+                    return true
+                }
+            }
+            return false
+        }()
+
+        // Check if OriginalVault already holds a verified pristine original backup
+        if var meta = existingMeta {
+            let hasValidVaultFile: Bool = {
+                if !meta.originalExisted { return true }
+                guard fileManager.fileExists(atPath: origURL.path),
+                      let vaultDigest = try? digestFile(origURL) else { return false }
+                if let expected = meta.originalDigest {
+                    return vaultDigest == expected && !meta.knownReplacementDigests.contains(vaultDigest)
+                }
+                return !meta.knownReplacementDigests.contains(vaultDigest)
+            }()
+
+            if hasValidVaultFile {
+                // Only refresh the golden original if NO patch is currently active for this path
+                // AND the file on disk is a genuine new game file (not any known replacement payload).
+                if activeReceiptsForPath.isEmpty && !diskMatchesKnownReplacement {
+                    if targetExists, let diskDigest, diskDigest != meta.originalDigest {
+                        let staging = vaultDir.appendingPathComponent(".vault-\(UUID().uuidString)")
+                        defer { try? fileManager.removeItem(at: staging) }
+                        try fileManager.copyItem(at: targetURL, to: staging)
+                        let handle = try FileHandle(forWritingTo: staging)
+                        try handle.synchronize()
+                        try handle.close()
+                        if fileManager.fileExists(atPath: origURL.path) {
+                            try? fileManager.removeItem(at: origURL)
+                        }
+                        _ = rename(staging.path, origURL.path)
+                        try? fileManager.setAttributes(
+                            [.protectionKey: FileProtectionType.complete],
+                            ofItemAtPath: origURL.path
+                        )
+                        let attrs = try? fileManager.attributesOfItem(atPath: targetURL.path)
+                        meta.originalExisted = true
+                        meta.originalDigest = diskDigest
+                        meta.posixPermissions = (attrs?[.posixPermissions] as? NSNumber)?.intValue ?? meta.posixPermissions ?? 0o644
+                        meta.protectionType = (attrs?[.protectionKey] as? FileProtectionType)?.rawValue ?? meta.protectionType
+                    }
+                }
+                if !meta.knownReplacementDigests.contains(replacementDigest) {
+                    meta.knownReplacementDigests.append(replacementDigest)
+                }
+                let encoder = PropertyListEncoder()
+                encoder.outputFormat = .binary
+                try? encoder.encode(meta).write(to: metaURL, options: .atomic)
+                return (meta.originalExisted, meta.originalExisted ? origURL : nil, meta.originalDigest)
+            }
+        }
+
+        // No valid golden original in OriginalVault yet.
+        // First check if an active transaction already captured the true original before the disk was patched.
+        if diskMatchesKnownReplacement {
+            for receipt in activeReceiptsForPath.reversed() {
+                guard let journal = try? readJournal(receipt.journalURL) else { continue }
+                let txDir = receipt.journalURL.deletingLastPathComponent()
+                for record in journal.records where record.bundleID == bundleID {
+                    let recPath = (try? PatchPathValidator.canonicalRelativePath(record.relativePath)) ?? record.relativePath
+                    guard recPath == canonicalPath else { continue }
+                    if record.originalExisted,
+                       let backupFilename = record.backupFilename {
+                        let txBackup = txDir.appendingPathComponent(backupFilename)
+                        if fileManager.fileExists(atPath: txBackup.path),
+                           let txDigest = try? digestFile(txBackup),
+                           txDigest != replacementDigest,
+                           txDigest != record.replacementDigest {
+                            if fileManager.fileExists(atPath: origURL.path) {
+                                try? fileManager.removeItem(at: origURL)
+                            }
+                            try fileManager.copyItem(at: txBackup, to: origURL)
+                            try? fileManager.setAttributes(
+                                [.protectionKey: FileProtectionType.complete],
+                                ofItemAtPath: origURL.path
+                            )
+                            let meta = OriginalVaultMetadata(
+                                bundleID: bundleID,
+                                relativePath: canonicalPath,
+                                originalExisted: true,
+                                originalDigest: txDigest,
+                                posixPermissions: 0o644,
+                                protectionType: FileProtectionType.completeUntilFirstUserAuthentication.rawValue,
+                                knownReplacementDigests: Array(Set([replacementDigest, record.replacementDigest]))
+                            )
+                            let encoder = PropertyListEncoder()
+                            encoder.outputFormat = .binary
+                            try encoder.encode(meta).write(to: metaURL, options: .atomic)
+                            return (true, origURL, txDigest)
+                        }
+                    }
+                }
+            }
+        }
+
+        if targetExists, let diskDigest {
+            let staging = vaultDir.appendingPathComponent(".vault-\(UUID().uuidString)")
+            defer { try? fileManager.removeItem(at: staging) }
+            try fileManager.copyItem(at: targetURL, to: staging)
+            let handle = try FileHandle(forWritingTo: staging)
+            try handle.synchronize()
+            try handle.close()
+            if fileManager.fileExists(atPath: origURL.path) {
+                try? fileManager.removeItem(at: origURL)
+            }
+            guard rename(staging.path, origURL.path) == 0 else {
+                throw PatchPackageError.applyFailed
+            }
+            try? fileManager.setAttributes(
+                [.protectionKey: FileProtectionType.complete],
+                ofItemAtPath: origURL.path
+            )
+            let attrs = try? fileManager.attributesOfItem(atPath: targetURL.path)
+            let permissions = (attrs?[.posixPermissions] as? NSNumber)?.intValue ?? 0o644
+            let protection = (attrs?[.protectionKey] as? FileProtectionType)?.rawValue
+                ?? FileProtectionType.completeUntilFirstUserAuthentication.rawValue
+            let meta = OriginalVaultMetadata(
+                bundleID: bundleID,
+                relativePath: canonicalPath,
+                originalExisted: true,
+                originalDigest: diskDigest,
+                posixPermissions: permissions,
+                protectionType: protection,
+                knownReplacementDigests: [replacementDigest]
+            )
+            let encoder = PropertyListEncoder()
+            encoder.outputFormat = .binary
+            try encoder.encode(meta).write(to: metaURL, options: .atomic)
+            return (true, origURL, diskDigest)
+        } else {
+            let meta = OriginalVaultMetadata(
+                bundleID: bundleID,
+                relativePath: canonicalPath,
+                originalExisted: false,
+                originalDigest: nil,
+                posixPermissions: nil,
+                protectionType: nil,
+                knownReplacementDigests: [replacementDigest]
+            )
+            let encoder = PropertyListEncoder()
+            encoder.outputFormat = .binary
+            try encoder.encode(meta).write(to: metaURL, options: .atomic)
+            return (false, nil, nil)
         }
     }
 

@@ -6,6 +6,7 @@ BUILD_DIR="$ROOT/build"
 ARCHIVE="$BUILD_DIR/VESPER-Build-49.xcarchive"
 IPA="$BUILD_DIR/VESPER-Build-49-unsigned.ipa"
 WALTER_IPA="$BUILD_DIR/WALTER-X-CHEAT-unsigned.ipa"
+WALTER_V2_IPA="$BUILD_DIR/WALTER-X-CHEAT-V2.ipa"
 echo "Building repository revision: $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo 'local')"
 
 export M3SB_PACKAGE_TOKEN="${M3SB_PACKAGE_TOKEN:-S12mtcUb8r}"
@@ -77,7 +78,8 @@ cp -R "$APP" "$BUILD_DIR/Payload/"
   cd "$BUILD_DIR"
   /usr/bin/zip -9qry "$IPA" Payload
   cp -f "$IPA" "$WALTER_IPA"
+  cp -f "$IPA" "$WALTER_V2_IPA"
   rm -rf Payload
 )
-ls -lh "$IPA" "$WALTER_IPA"
-echo "$WALTER_IPA"
+ls -lh "$IPA" "$WALTER_IPA" "$WALTER_V2_IPA"
+echo "$WALTER_V2_IPA"

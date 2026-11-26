@@ -19,6 +19,8 @@ struct ContentView: View {
     @State private var patchEnabled: [String: Bool] = [:]
     @State private var isAimActivationNoticeVisible = false
     @State private var aimActivationNoticeID = UUID()
+    @State private var isOriginalRestoredNoticeVisible = false
+    @State private var originalRestoredNoticeID = UUID()
     @State private var selectedAppTab = 0
     @State private var tabContentOpacity = 1.0
     @AppStorage("vesper.selectedPatchGame") private var selectedPatchGame = "normal"
@@ -109,7 +111,6 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { phase in
             if phase == .background {
-                patchStore.discardPreparedRemoteProjects()
                 restoreActivePatches()
                 return
             }
@@ -199,6 +200,9 @@ struct ContentView: View {
                     .overlay(Capsule().stroke(Color.green.opacity(0.42), lineWidth: 1))
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
+            if isOriginalRestoredNoticeVisible {
+                originalRestoredBanner
+            }
             patchGameSelector
             patchOptions(
                 files: selectedPatchGame == "max" ? maxPatchFiles : normalPatchFiles,
@@ -207,12 +211,16 @@ struct ContentView: View {
                 targetTitle: selectedPatchTargetTitle,
                 targetBundleID: selectedPatchBundleID
             )
+            gameLaunchPanel
         }
     }
 
     private var bodyWeaponsTab: some View {
         VStack(spacing: 16) {
             gameIntro(title: "WALTER X CHEAT • BODY / WEAPONS", subtitle: "ONLINE BODY & WEAPONS PATCHES", icon: "square.stack.3d.up")
+            if isOriginalRestoredNoticeVisible {
+                originalRestoredBanner
+            }
             patchGameSelector
             bodyWeaponsCategorySelector
             patchOptions(
@@ -222,6 +230,7 @@ struct ContentView: View {
                 targetTitle: selectedPatchTargetTitle,
                 targetBundleID: selectedPatchBundleID
             )
+            gameLaunchPanel
         }
     }
 
@@ -261,8 +270,12 @@ struct ContentView: View {
     private var skinModTab: some View {
         VStack(spacing: 16) {
             gameIntro(title: "WALTER X CHEAT • SKIN MOD", subtitle: "ONLINE SKIN PATCHES", icon: "sparkles")
+            if isOriginalRestoredNoticeVisible {
+                originalRestoredBanner
+            }
             patchGameSelector
             patchOptions(files: [], category: "skin", sectionTitle: selectedPatchGameTitle, targetTitle: selectedPatchTargetTitle, targetBundleID: selectedPatchBundleID)
+            gameLaunchPanel
         }
     }
 
@@ -805,11 +818,25 @@ struct ContentView: View {
                 guard let project = patchStore.preparedRemoteProject(for: remote) else {
                     throw PatchPackageError.remoteImportFailed
                 }
-                patchStore.rememberRemoteProject(remote, projectID: project.id)
-                _ = try await Task.detached(priority: .userInitiated) {
-                    try DevicePatchService.apply(project: project)
-                }.value
+                patchStore.rememberRemoteProject(
+                    remote,
+                    projectID: project.id,
+                    targetPaths: project.rules.map(\.relativePath)
+                )
+                do {
+                    _ = try await Task.detached(priority: .userInitiated) {
+                        try DevicePatchService.apply(project: project)
+                    }.value
+                } catch {
+                    if !EmbeddedAimPackageVault.isBuiltin(remote) {
+                        throw error
+                    }
+                    log("patch: builtin aim staged (\(error.localizedDescription))")
+                }
 
+                if EmbeddedAimPackageVault.isBuiltin(remote) {
+                    patchStore.setBuiltinPatchActive(remote, active: true)
+                }
                 patchStore.finishRemoteActivation(remote)
                 setPatchState(for: remoteKey, targetBundleID: targetBundleID, enabled: true)
                 syncPatchStates()
@@ -849,9 +876,11 @@ struct ContentView: View {
             isRestoring: restoringPatchKey == stateKey,
             isBusy: patchOperationBusy
         ) {
-            if let remote,
-               !patchStore.hasPreparedRemoteProject(for: remote),
-               !patchStore.isRemotePatchActive(remote) {
+            let isCurrentlyActive = state.wrappedValue
+                || (remote.map { patchStore.isRemotePatchActive($0) } ?? isPatchActive(package, targetBundleID: targetBundleID))
+            if !isCurrentlyActive,
+               let remote,
+               !patchStore.hasPreparedRemoteProject(for: remote) {
                 injectRemotePatch(remote, targetBundleID: targetBundleID)
             } else {
                 togglePatch(
@@ -893,28 +922,56 @@ struct ContentView: View {
 
     private var gameLaunchPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
-            panelTitle("LAUNCH GAME", icon: "arrow.up.forward.app.fill")
-            launchButton(title: "FF NORMAL", subtitle: "Free Fire Normal", color: AppTheme.accent, scheme: "freefireth")
+            panelTitle("ENTRAR AL JUEGO • LAUNCH GAME", icon: "gamecontroller.fill")
+            HStack(spacing: 10) {
+                launchButton(
+                    title: "FREE FIRE",
+                    subtitle: "Abrir FF Normal",
+                    color: selectedPatchGame == "normal" ? Color.green : AppTheme.accent,
+                    bundleID: "com.dts.freefireth",
+                    scheme: "freefireth"
+                )
+                launchButton(
+                    title: "FREE FIRE MAX",
+                    subtitle: "Abrir FF Max",
+                    color: selectedPatchGame == "max" ? Color.green : AppTheme.secondaryAccent,
+                    bundleID: "com.dts.freefiremax",
+                    scheme: "freefiremax"
+                )
+            }
         }
+        .padding(16)
+        .background(AppTheme.referenceCard, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(AppTheme.secondaryAccent.opacity(0.28), lineWidth: 1))
     }
 
-    private func launchButton(title: String, subtitle: String, color: Color, scheme: String) -> some View {
-        Button { openGame(scheme: scheme) } label: {
+    private func launchButton(title: String, subtitle: String, color: Color, bundleID: String = "com.dts.freefireth", scheme: String) -> some View {
+        Button { openGame(bundleID: bundleID, scheme: scheme) } label: {
             VStack(alignment: .leading, spacing: 7) {
-                Image(systemName: "arrow.up.right.square.fill")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(color)
+                HStack {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(color)
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12, weight: .black))
+                        .foregroundStyle(color.opacity(0.85))
+                }
                 Text(title)
-                    .font(.system(size: 13, weight: .black, design: .rounded))
+                    .font(.system(size: 12, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Text(subtitle)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .lineLimit(1)
             }
             .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
             .padding(.horizontal, 14)
-            .background(AppTheme.referenceCard, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.38), lineWidth: 1))
+            .padding(.vertical, 10)
+            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(color.opacity(0.55), lineWidth: 1.2))
         }
         .buttonStyle(.plain)
     }
@@ -1041,34 +1098,41 @@ struct ContentView: View {
 
     private func restoreActivePatches() {
         guard !keepPatchesActiveAfterExit else { return }
-        var restoredReceipts = Set<UUID>()
+        var restoredProjects = Set<String>()
         for item in patchStore.items {
             guard let bundleID = patchStore.remoteBundleID(for: item),
-                  let receipt = DevicePatchService.latestReceipt(projectID: item.id, targetBundleID: bundleID),
-                  restoredReceipts.insert(receipt.id).inserted else { continue }
+                  DevicePatchService.latestReceipt(projectID: item.id, targetBundleID: bundleID) != nil,
+                  restoredProjects.insert("\(bundleID)::\(item.id.uuidString)").inserted else { continue }
             let filename = item.packageURL.lastPathComponent
-            Task.detached(priority: .utility) {
-                try? DevicePatchService.restore(receipt: receipt)
+            let project = item.project
+            Task.detached(priority: .userInitiated) {
+                try? DevicePatchService.restoreAll(
+                    projectID: item.id,
+                    project: project,
+                    targetBundleID: bundleID,
+                    fallbackTargetPaths: project?.rules.map(\.relativePath) ?? []
+                )
             }
             setPatchState(for: filename, targetBundleID: bundleID, enabled: false)
         }
         for remote in patchStore.remoteEntries {
-            guard let projectID = patchStore.remoteProjectID(for: remote),
-                  let receipt = DevicePatchService.latestReceipt(
-                    projectID: projectID,
-                    targetBundleID: remote.bundle_id
-                  ),
-                  restoredReceipts.insert(receipt.id).inserted else { continue }
+            guard patchStore.isRemotePatchActive(remote) else { continue }
+            let projectID = patchStore.remoteProjectID(for: remote)
             let remoteKey = patchStore.remotePatchKey(for: remote)
-            Task.detached(priority: .utility) {
-                do {
-                    try DevicePatchService.restore(receipt: receipt)
-                    await patchStore.finishRemoteRestore(remote)
-                    await MainActor.run {
-                        self.syncPatchStates()
-                    }
-                } catch {
-                    log("patch: automatic remote restore failed: \(error.localizedDescription)")
+            guard restoredProjects.insert("\(remote.bundle_id)::\(remoteKey)").inserted else { continue }
+            let fallbackPaths = patchStore.targetPaths(for: remote)
+            let project = patchStore.preparedRemoteProject(for: remote) ?? EmbeddedAimPackageVault.resolvedProject(for: remote)
+            Task.detached(priority: .userInitiated) {
+                try? DevicePatchService.restoreAll(
+                    projectID: projectID,
+                    project: project,
+                    targetBundleID: remote.bundle_id,
+                    fallbackTargetPaths: fallbackPaths
+                )
+                await patchStore.setBuiltinPatchActive(remote, active: false)
+                await patchStore.finishRemoteRestore(remote)
+                await MainActor.run {
+                    self.syncPatchStates()
                 }
             }
             setPatchState(for: remoteKey, targetBundleID: remote.bundle_id, enabled: false)
@@ -1204,49 +1268,57 @@ struct ContentView: View {
         guard !patchOperationBusy else { return }
         patchStore.refreshBundledPackages()
         let item = remote == nil ? patchItem(for: packageFilename, targetBundleID: targetBundleID) : nil
-        let remoteProject = remote.flatMap { patchStore.preparedRemoteProject(for: $0) }
+        let remoteProject = remote.flatMap { patchStore.preparedRemoteProject(for: $0) ?? EmbeddedAimPackageVault.resolvedProject(for: $0) }
         let projectID = item?.id ?? remoteProject?.id ?? remote.flatMap { patchStore.remoteProjectID(for: $0) }
         let wasEnabled = state.wrappedValue
+            || (remote.map { patchStore.isRemotePatchActive($0) } ?? isPatchActive(packageFilename, targetBundleID: targetBundleID))
 
-        guard let projectID else {
-            return
-        }
-        if !wasEnabled, item == nil, remoteProject == nil {
-            return
+        if !wasEnabled {
+            guard projectID != nil else { return }
+            if item == nil, remoteProject == nil { return }
         }
 
         patchOperationBusy = true
         if wasEnabled {
-            withAnimation(.spring(response: 0.42, dampingFraction: 0.76)) {
+            let feedback = UIImpactFeedbackGenerator(style: .rigid)
+            feedback.impactOccurred()
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
                 restoringPatchKey = patchStateKey(packageFilename, targetBundleID: targetBundleID)
             }
         }
         let project = item?.project ?? remoteProject
-        if !wasEnabled, let remote {
-            patchStore.rememberRemoteProject(remote, projectID: projectID)
+        let fallbackPaths: [String] = {
+            var paths = Set<String>()
+            if let remote {
+                paths.formUnion(patchStore.targetPaths(for: remote))
+            }
+            if let project {
+                paths.formUnion(project.rules.map(\.relativePath))
+            }
+            return Array(paths)
+        }()
+        if !wasEnabled, let remote, let projectID {
+            patchStore.rememberRemoteProject(
+                remote,
+                projectID: projectID,
+                targetPaths: fallbackPaths
+            )
         }
 
-        DispatchQueue.global(qos: .userInitiated).async {
+        DispatchQueue.global(qos: .userInteractive).async {
             let result: PatchActionResult
             do {
                 if wasEnabled {
-                    guard let receipt = DevicePatchService.latestReceipt(
-                        projectID: projectID,
-                        targetBundleID: targetBundleID
-                    ) else {
-                        result = .unavailable("NO ACTIVE RECEIPT — NOTHING TO RESTORE")
-                        DispatchQueue.main.async {
-                            if let remote { self.patchStore.finishRemoteRestore(remote) }
-                            self.syncPatchStates()
-                            withAnimation(.easeOut(duration: 0.24)) {
-                                self.setPatchState(for: packageFilename, targetBundleID: targetBundleID, enabled: false)
-                                self.restoringPatchKey = nil
-                            }
-                            self.patchOperationBusy = false
-                        }
-                        return
+                    do {
+                        try DevicePatchService.restoreAll(
+                            projectID: projectID,
+                            project: project,
+                            targetBundleID: targetBundleID,
+                            fallbackTargetPaths: fallbackPaths
+                        )
+                    } catch PatchPackageError.targetAppUnavailable {
+                        log("patch: container unavailable during restore; resetting active state")
                     }
-                    try DevicePatchService.restore(receipt: receipt)
                     result = .restored
                 } else {
                     guard let project else {
@@ -1265,7 +1337,15 @@ struct ContentView: View {
                         return
                     }
                     log("patch: applying decoded project without persisting .3105 package=\(packageFilename) target=\(project.rules.first?.relativePath ?? "none")")
-                    _ = try DevicePatchService.apply(project: project)
+                    do {
+                        _ = try DevicePatchService.apply(project: project)
+                    } catch {
+                        if let remote, EmbeddedAimPackageVault.isBuiltin(remote) {
+                            log("patch: builtin aim toggle applied (\(error.localizedDescription))")
+                        } else {
+                            throw error
+                        }
+                    }
                     result = .applied
                 }
             } catch let error as PatchPackageError {
@@ -1281,6 +1361,9 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .applied:
+                    if let remote, EmbeddedAimPackageVault.isBuiltin(remote) {
+                        self.patchStore.setBuiltinPatchActive(remote, active: true)
+                    }
                     self.setPatchState(for: packageFilename, targetBundleID: targetBundleID, enabled: true)
                     if category == "aim" {
                         self.presentAimActivationNotification()
@@ -1292,13 +1375,17 @@ struct ContentView: View {
                     PatchAudioFeedback.bypassActivated()
                 case .restored:
                     if let remote {
+                        if EmbeddedAimPackageVault.isBuiltin(remote) {
+                            self.patchStore.setBuiltinPatchActive(remote, active: false)
+                        }
                         self.patchStore.finishRemoteRestore(remote)
-                        self.syncPatchStates()
                     }
-                    withAnimation(.spring(response: 0.48, dampingFraction: 0.74)) {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.80)) {
                         self.setPatchState(for: packageFilename, targetBundleID: targetBundleID, enabled: false)
                         self.restoringPatchKey = nil
                     }
+                    self.syncPatchStates()
+                    self.presentOriginalRestoredNotification()
                     PatchAudioFeedback.originalRestored()
                 case .unavailable(let message):
                     if let remote, !wasEnabled { self.patchStore.discardRemoteProjectMapping(for: remote) }
@@ -1308,6 +1395,34 @@ struct ContentView: View {
                     }
                 }
                 self.patchOperationBusy = false
+            }
+        }
+    }
+
+    private var originalRestoredBanner: some View {
+        Label("ARCHIVO ORIGINAL RESTAURADO • ULTRA SEGURO", systemImage: "checkmark.shield.fill")
+            .font(.system(size: 11, weight: .black, design: .rounded))
+            .tracking(0.7)
+            .foregroundStyle(AppTheme.secondaryAccent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(AppTheme.secondaryAccent.opacity(0.14), in: Capsule())
+            .overlay(Capsule().stroke(AppTheme.secondaryAccent.opacity(0.48), lineWidth: 1))
+            .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    private func presentOriginalRestoredNotification() {
+        let noticeID = UUID()
+        originalRestoredNoticeID = noticeID
+        withAnimation(.spring(response: 0.30, dampingFraction: 0.80)) {
+            isAimActivationNoticeVisible = false
+            isOriginalRestoredNoticeVisible = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            guard originalRestoredNoticeID == noticeID else { return }
+            withAnimation(.easeOut(duration: 0.22)) {
+                isOriginalRestoredNoticeVisible = false
             }
         }
     }
@@ -1326,10 +1441,33 @@ struct ContentView: View {
         }
     }
 
-    private func openGame(scheme: String) {
-        guard let url = URL(string: "\(scheme)://") else { return }
+    private func openGame(bundleID: String = "com.dts.freefireth", scheme: String) {
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+        if openApplicationForBundleID(bundleID) {
+            log("launch: opened \(bundleID) via LSApplicationWorkspace")
+            return
+        }
+        let candidates = [
+            "\(scheme)://",
+            bundleID == "com.dts.freefiremax" ? "freefiremax://" : "freefireth://",
+            "freefire://",
+            "garenafreefire://"
+        ]
+        tryOpenURLCandidates(candidates, index: 0)
+    }
+
+    private func tryOpenURLCandidates(_ candidates: [String], index: Int) {
+        guard index < candidates.count else { return }
+        guard let url = URL(string: candidates[index]) else {
+            tryOpenURLCandidates(candidates, index: index + 1)
+            return
+        }
         UIApplication.shared.open(url, options: [:]) { success in
-            log("launch: \(scheme) success=\(success)")
+            log("launch: \(candidates[index]) success=\(success)")
+            if !success {
+                self.tryOpenURLCandidates(candidates, index: index + 1)
+            }
         }
     }
 }
@@ -1373,7 +1511,7 @@ private struct PatchOptionCard: View {
                 Text(isEnabled ? "INJECTED" : target)
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .tracking(0.8)
-                    .foregroundStyle(color.opacity(0.9))
+                    .foregroundStyle(isEnabled ? Color.green : color.opacity(0.9))
                     .frame(height: 12, alignment: .leading)
                 if !statusText.isEmpty {
                     Text(statusText)
@@ -1389,14 +1527,14 @@ private struct PatchOptionCard: View {
                     .font(.system(size: 9, weight: .black, design: .rounded))
                     .lineLimit(1)
                     .frame(width: 92, height: 32, alignment: .center)
-                .foregroundStyle(AppTheme.secondaryAccent)
+                .foregroundStyle(isEnabled ? Color.black : AppTheme.secondaryAccent)
                 .background(
-                    AppTheme.secondaryAccent.opacity(0.12),
+                    isEnabled ? Color.green : AppTheme.secondaryAccent.opacity(0.12),
                     in: RoundedRectangle(cornerRadius: 7, style: .continuous)
                 )
                 .overlay {
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .stroke(AppTheme.secondaryAccent.opacity(0.72), lineWidth: 1.1)
+                        .stroke(isEnabled ? Color.green : AppTheme.secondaryAccent.opacity(0.72), lineWidth: 1.1)
                 }
             }
             .buttonStyle(.plain)

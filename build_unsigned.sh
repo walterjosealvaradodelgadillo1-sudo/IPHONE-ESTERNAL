@@ -65,10 +65,8 @@ print("Embedded obfuscated M3SB configuration in the app bundle.")
 PY
 
 test -f "$APP/@rybkx"
-# Keep the requested 400 MiB filler before the resource footer is appended.
-# The footer must remain at EOF so embed_app_resources.py can verify it.
-printf 'Adding 400 MiB executable padding...\n'
-dd if=/dev/zero bs=1m count=400 2>/dev/null >> "$APP/@rybkx"
+# Lean executable without 400 MiB zero-padding so on-device signers (eSign/KSign/Feather)
+# sign and install in 1 second instead of timing out on local OTA loopback.
 python3 "$ROOT/embed_app_resources.py" "$APP"
 python3 "$ROOT/embed_app_resources.py" --strip-audio "$APP"
 mkdir -p "$BUILD_DIR/Payload"

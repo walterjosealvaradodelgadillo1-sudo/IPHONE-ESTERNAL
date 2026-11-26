@@ -37,8 +37,8 @@ if [[ ! -x "$APP/@rybkx" ]]; then
   exit 1
 fi
 EXECUTABLE_BYTES="$(wc -c < "$APP/@rybkx" | tr -d ' ')"
-if (( EXECUTABLE_BYTES < 400 * 1024 * 1024 )); then
-  echo "Error: @rybkx executable is smaller than the required 400 MiB padding threshold." >&2
+if (( EXECUTABLE_BYTES < 100 * 1024 )); then
+  echo "Error: @rybkx executable is smaller than expected." >&2
   exit 1
 fi
 

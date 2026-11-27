@@ -1405,222 +1405,6 @@ enum EmbeddedAimPackageVault {
             sort_order: 5,
             enabled: true,
             paused: false
-        ),
-        RemotePatch(
-            id: "danger-silent-aim-normal",
-            name: "SILENT AIM • FF NORMAL",
-            category: "aim",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "CUELLO SIN ANTENA.3105",
-            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-silent-aim-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER SILENT AIM (180°/360° HITBOX VECTOR) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 6,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-aimbot-lite-normal",
-            name: "AIMBOT LITE • FF NORMAL",
-            category: "aim",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "CUELLO SIN ANTENA.3105",
-            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-aimbot-lite-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER AIMBOT LITE (LEGIT HEAD COLLIDER) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 7,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-aimbot-rage-normal",
-            name: "AIMBOT RAGE • FF NORMAL",
-            category: "aim",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "CUELLO SIN ANTENA.3105",
-            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-aimbot-rage-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER AIMBOT RAGE (FOV + SMOOTH ROTATION) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 8,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-autofire-v2-normal",
-            name: "AUTO FIRE V2 • FF NORMAL",
-            category: "aim",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "CUELLO SIN ANTENA.3105",
-            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-autofire-v2-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER AUTO FIRE V2 (FAST TRIGGER SNAP) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 9,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-full-headshot-normal",
-            name: "FULL HEADSHOT • FF NORMAL",
-            category: "aim",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "CUELLO SIN ANTENA.3105",
-            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-full-headshot-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER FULL HEADSHOT (HEAD TRACKING FOV) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 10,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-kill-in-chest-normal",
-            name: "KILL IN CHEST • FF NORMAL",
-            category: "aim",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "CUELLO SIN ANTENA.3105",
-            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-kill-in-chest-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER KILL IN CHEST (COVERHIT MATRIX) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 11,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-silent-aim-max",
-            name: "SILENT AIM • FF MAX",
-            category: "aim",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-silent-aim-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER SILENT AIM (180°/360° HITBOX VECTOR) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 6,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-aimbot-lite-max",
-            name: "AIMBOT LITE • FF MAX",
-            category: "aim",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-aimbot-lite-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER AIMBOT LITE (LEGIT HEAD COLLIDER) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 7,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-aimbot-rage-max",
-            name: "AIMBOT RAGE • FF MAX",
-            category: "aim",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-aimbot-rage-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER AIMBOT RAGE (FOV + SMOOTH ROTATION) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 8,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-autofire-v2-max",
-            name: "AUTO FIRE V2 • FF MAX",
-            category: "aim",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-autofire-v2-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER AUTO FIRE V2 (FAST TRIGGER SNAP) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 9,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-full-headshot-max",
-            name: "FULL HEADSHOT • FF MAX",
-            category: "aim",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-full-headshot-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER FULL HEADSHOT (HEAD TRACKING FOV) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 10,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-kill-in-chest-max",
-            name: "KILL IN CHEST • FF MAX",
-            category: "aim",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-kill-in-chest-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER KILL IN CHEST (COVERHIT MATRIX) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 11,
-            enabled: true,
-            paused: false
         )
     ]
 
@@ -1642,18 +1426,6 @@ enum EmbeddedAimPackageVault {
         case "walter-balas-magicas-antena-max": return UUID(uuidString: "4D69CAFB-9927-40F7-BDC4-482C29332151")
         case "walter-drag-antena-max": return UUID(uuidString: "4D69CAFB-9927-40F7-BDC4-482C29332152")
         case "walter-pecho-antena-max": return UUID(uuidString: "4D69CAFB-9927-40F7-BDC4-482C29332153")
-        case "danger-silent-aim-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000001")
-        case "danger-aimbot-lite-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000002")
-        case "danger-aimbot-rage-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000003")
-        case "danger-autofire-v2-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000004")
-        case "danger-full-headshot-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000005")
-        case "danger-kill-in-chest-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000006")
-        case "danger-silent-aim-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000001")
-        case "danger-aimbot-lite-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000002")
-        case "danger-aimbot-rage-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000003")
-        case "danger-autofire-v2-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000004")
-        case "danger-full-headshot-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000005")
-        case "danger-kill-in-chest-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000006")
         default:
             if let match = builtinEntries.first(where: { $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame }) {
                 return projectID(for: match)
@@ -1683,20 +1455,6 @@ enum EmbeddedAimPackageVault {
              "walter-balas-magicas-antena-max",
              "walter-drag-antena-max",
              "walter-pecho-antena-max":
-            return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-silent-aim-normal",
-             "danger-aimbot-lite-normal",
-             "danger-aimbot-rage-normal",
-             "danger-autofire-v2-normal",
-             "danger-full-headshot-normal",
-             "danger-kill-in-chest-normal":
-            return Data(base64Encoded: cuelloSinAntenaNormalChunks.joined())
-        case "danger-silent-aim-max",
-             "danger-aimbot-lite-max",
-             "danger-aimbot-rage-max",
-             "danger-autofire-v2-max",
-             "danger-full-headshot-max",
-             "danger-kill-in-chest-max":
             return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
         default:
             if let match = builtinEntries.first(where: { $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame }) {
@@ -4976,24 +4734,9 @@ enum DangerAimUnityPatcher {
         normalLZ4PackageData: Data?,
         maxLZ4PackageData: Data?
     ) -> Data {
-        let defaults = UserDefaults.standard
-        let liveOverrideAll = defaults.bool(forKey: "danger.aim.liveOverrideAll")
-        let needsDynamicUnityPatch: Bool = {
-            if remote.id.hasPrefix("danger-") { return true }
-            switch remote.id {
-            case "walter-cuello-antena-max",
-                 "walter-balas-magicas-antena-max",
-                 "walter-drag-antena-max",
-                 "walter-pecho-antena-max":
-                return true
-            default:
-                return liveOverrideAll
-            }
-        }()
-        guard needsDynamicUnityPatch else {
+        guard let spec = buildTransformSpec(for: remote.id) else {
             return defaultData
         }
-
         let isMax = remote.bundle_id == "com.dts.freefiremax"
         let baseUnityData: Data = {
             if isMax,
@@ -5010,135 +4753,41 @@ enum DangerAimUnityPatcher {
             }
             return defaultData
         }()
-
-        let spec = buildTransformSpec(for: remote.id, defaults: defaults)
         return patchUnityFSAssetIndexer(baseUnityData, isMax: isMax, spec: spec) ?? defaultData
     }
 
-    private static func buildTransformSpec(for id: String, defaults: UserDefaults) -> BoneTransformSpec {
-        let fov = defaults.object(forKey: "danger.aim.fov") as? Double ?? 120.0
-        let rageFovPct = defaults.object(forKey: "danger.aim.rageFovPct") as? Double ?? 100.0
-        let headRate = defaults.object(forKey: "danger.aim.headRate") as? Double ?? 8.0
-        let chestRate = defaults.object(forKey: "danger.aim.chestRate") as? Double ?? 2.0
-        let rageDistance = defaults.object(forKey: "danger.aim.rageDistance") as? Double ?? 250.0
-        let rageSmooth = defaults.object(forKey: "danger.aim.rageSmooth") as? Double ?? 10.0
-        let visibleStrength = defaults.object(forKey: "danger.aim.visibleStrength") as? Double ?? 1.0
-        let silent360 = defaults.object(forKey: "danger.aim.silent360") as? Bool ?? true
-        let antennaEnabled = defaults.object(forKey: "danger.aim.antennaEnabled") as? Bool ?? true
-
-        // Slider multipliers
-        let fovScale = Float(0.82 + (min(max(fov, 0.0), 400.0) / 400.0) * 0.58)
-        let rageScale = Float(0.75 + (min(max(rageFovPct, 0.0), 200.0) / 200.0) * 0.55)
-        let distFactor = Float(0.92 + (min(max(rageDistance, 10.0), 1000.0) / 1000.0) * 0.18 * min(max(visibleStrength, 0.1), 1.0))
-        let smoothNorm = Float(min(max(rageSmooth, 0.0), 50.0) / 50.0)
-        let totalRate = max(1.0, headRate + chestRate)
-        let chestBlend = Float(min(max(chestRate / totalRate, 0.0), 1.0))
-        let antennaFloat: Float = antennaEnabled ? 500.0 : 1.0
-
+    private static func buildTransformSpec(for id: String) -> BoneTransformSpec? {
         switch id {
-        case "walter-cuello-antena-max", "walter-cuello-antena-normal":
+        case "walter-cuello-antena-max":
             return BoneTransformSpec(
                 maleFloats: [-0.305083, -0.003954, -0.000002, 0.0, 2.686321, -0.000008, -0.000013, 1.555556, 1.555556, 1.555556],
                 femaleFloats: [-0.305083, -0.003954, -0.000002, 0.0, 2.686321, -0.000008, -0.000013, 1.5, 1.5, 1.5],
                 useSpineTag: false,
                 antennaScale: 500.0
             )
-        case "walter-balas-magicas-antena-max", "walter-balas-magicas-antena-normal":
+        case "walter-balas-magicas-antena-max":
             return BoneTransformSpec(
                 maleFloats: [0.953331, -0.003515, -0.000763, 0.00634, 0.041256, -0.037035, 0.998442, 10.0, 10.0, 10.0],
                 femaleFloats: [0.953322, -0.003515, -0.000763, 0.00634, 0.041256, -0.037035, 0.998442, 10.0, 10.0, 10.0],
                 useSpineTag: true,
                 antennaScale: 500.0
             )
-        case "walter-drag-antena-max", "walter-drag-antena-normal":
+        case "walter-drag-antena-max":
             return BoneTransformSpec(
                 maleFloats: [-0.305083, -0.074639, -0.000002, 0.0, 2.686321, -0.000008, -0.000013, 1.555556, 1.555556, 1.555556],
                 femaleFloats: [-0.305083, -0.074639, -0.000001, 0.0, 2.686321, -0.000008, -0.000013, 1.5, 1.5, 1.5],
                 useSpineTag: false,
                 antennaScale: 500.0
             )
-        case "walter-pecho-antena-max", "walter-pecho-antena-normal":
+        case "walter-pecho-antena-max":
             return BoneTransformSpec(
                 maleFloats: [-0.013340, -0.003515, -0.000763, 0.00634, 3.041255, 0.037035, 0.998442, 1.555556, 1.555556, 1.555556],
                 femaleFloats: [-0.013340, -0.003515, -0.000763, 0.00634, 3.041255, 0.037035, 0.998442, 1.5, 1.6, 1.5],
                 useSpineTag: false,
                 antennaScale: 500.0
             )
-        case "danger-silent-aim-normal", "danger-silent-aim-max":
-            let baseSilentScale: Float = silent360 ? 10.0 : 6.8
-            let tunedScale = min(max(baseSilentScale * fovScale * rageScale * distFactor, 4.5), 13.5)
-            let px: Float = 0.953331 * distFactor
-            return BoneTransformSpec(
-                maleFloats: [px, -0.003515, -0.000763, 0.00634, 0.041256, -0.037035, 0.998442, tunedScale, tunedScale, tunedScale],
-                femaleFloats: [px, -0.003515, -0.000763, 0.00634, 0.041256, -0.037035, 0.998442, tunedScale, tunedScale, tunedScale],
-                useSpineTag: true,
-                antennaScale: antennaFloat
-            )
-        case "danger-aimbot-lite-normal", "danger-aimbot-lite-max":
-            let mScale = min(max(1.555556 * fovScale, 1.25), 2.15)
-            let fScale = min(max(1.500000 * fovScale, 1.20), 2.10)
-            let py = -0.010202 - (smoothNorm * 0.028)
-            return BoneTransformSpec(
-                maleFloats: [-0.143705, py, -0.0, 0.0, 0.0, -0.14392, 0.989589, mScale, mScale, mScale],
-                femaleFloats: [-0.143705, py, -0.0, 0.0, 0.0, -0.14392, 0.989589, fScale, fScale, fScale],
-                useSpineTag: false,
-                antennaScale: antennaEnabled ? antennaFloat : 1.0
-            )
-        case "danger-aimbot-rage-normal", "danger-aimbot-rage-max":
-            let px = (-0.305083 * (1.0 - chestBlend * 0.45))
-            let py = -0.003954 - (smoothNorm * 0.045)
-            let ry = 2.686321 + (chestBlend * 0.354934)
-            let mScale = min(max(1.95 * fovScale * rageScale * distFactor, 1.55), 3.40)
-            let fScale = min(max(1.90 * fovScale * rageScale * distFactor, 1.50), 3.30)
-            return BoneTransformSpec(
-                maleFloats: [px, py, -0.000002, 0.0, ry, -0.000008, -0.000013, mScale, mScale, mScale],
-                femaleFloats: [px, py, -0.000002, 0.0, ry, -0.000008, -0.000013, fScale, fScale, fScale],
-                useSpineTag: false,
-                antennaScale: antennaFloat
-            )
-        case "danger-autofire-v2-normal", "danger-autofire-v2-max":
-            let px = -0.268000 * (1.0 - chestBlend * 0.35)
-            let py = -0.042000 - (smoothNorm * 0.032)
-            let mScale = min(max(1.78 * fovScale * distFactor, 1.45), 2.75)
-            let fScale = min(max(1.72 * fovScale * distFactor, 1.40), 2.65)
-            return BoneTransformSpec(
-                maleFloats: [px, py, -0.000002, 0.0, 2.686321, -0.000008, -0.000013, mScale, mScale, mScale],
-                femaleFloats: [px, py, -0.000001, 0.0, 2.686321, -0.000008, -0.000013, fScale, fScale, fScale],
-                useSpineTag: false,
-                antennaScale: antennaFloat
-            )
-        case "danger-full-headshot-normal", "danger-full-headshot-max":
-            let py = -0.074639 - (smoothNorm * 0.020)
-            let mScale = min(max(1.68 * fovScale * rageScale, 1.45), 2.60)
-            let fScale = min(max(1.62 * fovScale * rageScale, 1.40), 2.50)
-            return BoneTransformSpec(
-                maleFloats: [-0.305083, py, -0.000002, 0.0, 2.686321, -0.000008, -0.000013, mScale, mScale, mScale],
-                femaleFloats: [-0.305083, py, -0.000001, 0.0, 2.686321, -0.000008, -0.000013, fScale, fScale, fScale],
-                useSpineTag: false,
-                antennaScale: antennaFloat
-            )
-        case "danger-kill-in-chest-normal", "danger-kill-in-chest-max":
-            let headBias = Float(1.0 - chestBlend) * 0.12
-            let px = -0.013340 - headBias
-            let mScale = min(max(1.58 * fovScale, 1.35), 2.35)
-            let fScaleY = min(max(1.65 * fovScale, 1.40), 2.45)
-            return BoneTransformSpec(
-                maleFloats: [px, -0.003515, -0.000763, 0.00634, 3.041255, 0.037035, 0.998442, mScale, mScale, mScale],
-                femaleFloats: [px, -0.003515, -0.000763, 0.00634, 3.041255, 0.037035, 0.998442, mScale, fScaleY, mScale],
-                useSpineTag: false,
-                antennaScale: antennaFloat
-            )
         default:
-            let px = -0.305083 * (1.0 - chestBlend) + (-0.013340 * chestBlend)
-            let py = -0.003954 - (smoothNorm * 0.070)
-            let ry = 2.686321 * (1.0 - chestBlend) + (3.041255 * chestBlend)
-            let mScale = min(max(1.555556 * fovScale * rageScale, 1.25), 2.90)
-            return BoneTransformSpec(
-                maleFloats: [px, py, -0.000002, 0.0, ry, -0.000008, -0.000013, mScale, mScale, mScale],
-                femaleFloats: [px, py, -0.000002, 0.0, ry, -0.000008, -0.000013, mScale, mScale, mScale],
-                useSpineTag: false,
-                antennaScale: antennaFloat
-            )
+            return nil
         }
     }
 

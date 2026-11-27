@@ -306,11 +306,25 @@ final class PatchProjectStore: ObservableObject {
         UserDefaults.standard.set(active, forKey: key)
     }
 
+    func clearBuiltinActiveStates(bundleID: String, matchingPaths: [String]) {
+        let pathSet = Set(matchingPaths)
+        for entry in remoteEntries where entry.bundle_id == bundleID && EmbeddedAimPackageVault.isBuiltin(entry) {
+            let entryPaths = Set(EmbeddedAimPackageVault.targetRelativePaths(for: entry))
+            if pathSet.isEmpty || !entryPaths.isDisjoint(with: pathSet) {
+                setBuiltinPatchActive(entry, active: false)
+                remoteProjectIDs.removeValue(forKey: remotePatchKey(for: entry))
+            }
+        }
+        UserDefaults.standard.set(remoteProjectIDs, forKey: Self.remoteProjectIDsKey)
+    }
+
     func rememberRemoteProject(_ remote: RemotePatch, projectID: UUID, targetPaths: [String] = []) {
         let allPaths = Array(Set(remote.normalizedTargetPaths + targetPaths))
+        let isBuiltin = EmbeddedAimPackageVault.isBuiltin(remote)
         let relatedEntries = remoteEntries.filter {
-            $0.bundle_id == remote.bundle_id &&
-            $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame
+            if isBuiltin { return $0.id == remote.id }
+            return $0.bundle_id == remote.bundle_id &&
+                $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame
         }
         for entry in relatedEntries {
             let entryKey = remotePatchKey(for: entry)
@@ -329,9 +343,11 @@ final class PatchProjectStore: ObservableObject {
     }
 
     func discardRemoteProjectMapping(for remote: RemotePatch) {
+        let isBuiltin = EmbeddedAimPackageVault.isBuiltin(remote)
         let relatedEntries = remoteEntries.filter {
-            $0.bundle_id == remote.bundle_id &&
-            $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame
+            if isBuiltin { return $0.id == remote.id }
+            return $0.bundle_id == remote.bundle_id &&
+                $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame
         }
         for entry in relatedEntries {
             let entryKey = remotePatchKey(for: entry)
@@ -357,9 +373,11 @@ final class PatchProjectStore: ObservableObject {
     }
 
     func finishRemoteRestore(_ remote: RemotePatch) {
+        let isBuiltin = EmbeddedAimPackageVault.isBuiltin(remote)
         let relatedEntries = remoteEntries.filter {
-            $0.bundle_id == remote.bundle_id &&
-            $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame
+            if isBuiltin { return $0.id == remote.id }
+            return $0.bundle_id == remote.bundle_id &&
+                $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame
         }
         for entry in relatedEntries {
             let key = remotePatchKey(for: entry)
@@ -1211,7 +1229,7 @@ enum EmbeddedAimPackageVault {
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
             filename: "Cuello - Antena.3105",
             sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
-            version: "1.0",
+            version: "2.0",
             download_url: "https://api.vesperdash.com/patches/walter-cuello-antena-normal.3105",
             image_url: nil,
             status_text: "FREE FIRE NORMAL • CUELLO - ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
@@ -1229,7 +1247,7 @@ enum EmbeddedAimPackageVault {
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
             filename: "CUELLO SIN ANTENA.3105",
             sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
-            version: "1.0",
+            version: "2.0",
             download_url: "https://api.vesperdash.com/patches/walter-cuello-sin-antena-normal.3105",
             image_url: nil,
             status_text: "FREE FIRE NORMAL • CUELLO SIN ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
@@ -1247,7 +1265,7 @@ enum EmbeddedAimPackageVault {
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
             filename: "Balas magicas - antena.3105",
             sha256: "c14e8c307d460a9c1de4989b620b2c525e5fd68156cd7ac5cd389f6bc9613a4c",
-            version: "1.0",
+            version: "2.0",
             download_url: "https://api.vesperdash.com/patches/walter-balas-magicas-antena-normal.3105",
             image_url: nil,
             status_text: "FREE FIRE NORMAL • BALAS MAGICAS - ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
@@ -1265,7 +1283,7 @@ enum EmbeddedAimPackageVault {
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
             filename: "Drag - Antena.3105",
             sha256: "d94d4c44ff6b5068ebe663dca735a26398c559b4bfa891e3e9731a3c10eafebe",
-            version: "1.0",
+            version: "2.0",
             download_url: "https://api.vesperdash.com/patches/walter-drag-antena-normal.3105",
             image_url: nil,
             status_text: "FREE FIRE NORMAL • DRAG - ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
@@ -1283,7 +1301,7 @@ enum EmbeddedAimPackageVault {
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
             filename: "Pecho - Antena.3105",
             sha256: "649bbe8923353fc6854a6c9659df730a753f4504707fcb6cb5b2a34e98983467",
-            version: "1.0",
+            version: "2.0",
             download_url: "https://api.vesperdash.com/patches/walter-pecho-antena-normal.3105",
             image_url: nil,
             status_text: "FREE FIRE NORMAL • PECHO - ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
@@ -1301,11 +1319,515 @@ enum EmbeddedAimPackageVault {
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
             filename: "CUELLO SIN ANTENA FF MAX.3105",
             sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "1.0",
+            version: "2.0",
             download_url: "https://api.vesperdash.com/patches/walter-cuello-sin-antena-max.3105",
             image_url: nil,
             status_text: "FREE FIRE MAX • CUELLO SIN ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
             sort_order: 1,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-silent-aim-normal",
+            name: "SILENT AIM • FF NORMAL",
+            category: "aim",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Balas magicas - antena.3105",
+            sha256: "c14e8c307d460a9c1de4989b620b2c525e5fd68156cd7ac5cd389f6bc9613a4c",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-silent-aim-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER SILENT AIM (180°/360° VECTOR) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 6,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-aimbot-lite-normal",
+            name: "AIMBOT LITE • FF NORMAL",
+            category: "aim",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "CUELLO SIN ANTENA.3105",
+            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-aimbot-lite-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER AIMBOT LITE (LEGIT HEAD COLLIDER) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 7,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-aimbot-rage-normal",
+            name: "AIMBOT RAGE • FF NORMAL",
+            category: "aim",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Cuello - Antena.3105",
+            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-aimbot-rage-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER AIMBOT RAGE (FOV + SMOOTH ROTATION) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 8,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-autofire-v2-normal",
+            name: "AUTO FIRE V2 • FF NORMAL",
+            category: "aim",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Drag - Antena.3105",
+            sha256: "d94d4c44ff6b5068ebe663dca735a26398c559b4bfa891e3e9731a3c10eafebe",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-autofire-v2-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER AUTO FIRE V2 (180MS PULSE ENGINE) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 9,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-full-headshot-normal",
+            name: "FULL HEADSHOT • FF NORMAL",
+            category: "aim",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Drag - Antena.3105",
+            sha256: "d94d4c44ff6b5068ebe663dca735a26398c559b4bfa891e3e9731a3c10eafebe",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-full-headshot-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER FULL HEADSHOT (HEAD TRACKING FOV) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 10,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-kill-in-chest-normal",
+            name: "KILL IN CHEST • FF NORMAL",
+            category: "aim",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Pecho - Antena.3105",
+            sha256: "649bbe8923353fc6854a6c9659df730a753f4504707fcb6cb5b2a34e98983467",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-kill-in-chest-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER KILL IN CHEST (COVERHIT MATRIX) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 11,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-silent-aim-max",
+            name: "SILENT AIM • FF MAX",
+            category: "aim",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-silent-aim-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER SILENT AIM (180°/360° VECTOR) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 2,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-aimbot-lite-max",
+            name: "AIMBOT LITE • FF MAX",
+            category: "aim",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-aimbot-lite-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER AIMBOT LITE (LEGIT HEAD COLLIDER) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 3,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-aimbot-rage-max",
+            name: "AIMBOT RAGE • FF MAX",
+            category: "aim",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-aimbot-rage-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER AIMBOT RAGE (FOV + SMOOTH ROTATION) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 4,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-autofire-v2-max",
+            name: "AUTO FIRE V2 • FF MAX",
+            category: "aim",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-autofire-v2-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER AUTO FIRE V2 (180MS PULSE ENGINE) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 5,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-full-headshot-max",
+            name: "FULL HEADSHOT • FF MAX",
+            category: "aim",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-full-headshot-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER FULL HEADSHOT (HEAD TRACKING FOV) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 6,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-kill-in-chest-max",
+            name: "KILL IN CHEST • FF MAX",
+            category: "aim",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-kill-in-chest-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER KILL IN CHEST (COVERHIT MATRIX) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 7,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-lines-normal",
+            name: "ESP LINES • FF NORMAL",
+            category: "esp",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Cuello - Antena.3105",
+            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-lines-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER ESP SNAPLINES (TOP / CENTRE / BOTTOM) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 1,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-box-normal",
+            name: "ESP BOX • FF NORMAL",
+            category: "esp",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Cuello - Antena.3105",
+            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-box-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER ESP 2D BOX (SHADOW CORNERED / FULL BOX) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 2,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-filled-normal",
+            name: "ESP FILLED • FF NORMAL",
+            category: "esp",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Cuello - Antena.3105",
+            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-filled-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER ESP FILLED BOX (TRANSLUCENT + RGB) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 3,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-name-normal",
+            name: "ESP NAME • FF NORMAL",
+            category: "esp",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Cuello - Antena.3105",
+            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-name-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER ESP PLAYER NAME + DISTANCE • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 4,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-health-normal",
+            name: "ESP HEALTH • FF NORMAL",
+            category: "esp",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Cuello - Antena.3105",
+            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-health-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER ESP HEALTH BAR (200 HP GRADIENT + GLOW) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 5,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-radar-normal",
+            name: "ESP RADAR 360 • FF NORMAL",
+            category: "esp",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Cuello - Antena.3105",
+            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-radar-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER ESP RADAR 360° SWEEP ARROWS • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 6,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-wukong-normal",
+            name: "ESP WUKONG • FF NORMAL",
+            category: "esp",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Cuello - Antena.3105",
+            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-wukong-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER ESP WUKONG / CAMOUFLAGE VISIBILITY • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 7,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-weapons-normal",
+            name: "ESP WEAPONS • FF NORMAL",
+            category: "esp",
+            game: "normal",
+            bundle_id: "com.dts.freefireth",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
+            filename: "Cuello - Antena.3105",
+            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-weapons-normal.3105",
+            image_url: nil,
+            status_text: "FREE FIRE NORMAL • DANGER ESP ACTIVE WEAPON NAME & ICON • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 8,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-lines-max",
+            name: "ESP LINES • FF MAX",
+            category: "esp",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-lines-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER ESP SNAPLINES (TOP / CENTRE / BOTTOM) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 1,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-box-max",
+            name: "ESP BOX • FF MAX",
+            category: "esp",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-box-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER ESP 2D BOX (SHADOW CORNERED / FULL BOX) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 2,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-filled-max",
+            name: "ESP FILLED • FF MAX",
+            category: "esp",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-filled-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER ESP FILLED BOX (TRANSLUCENT + RGB) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 3,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-name-max",
+            name: "ESP NAME • FF MAX",
+            category: "esp",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-name-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER ESP PLAYER NAME + DISTANCE • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 4,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-health-max",
+            name: "ESP HEALTH • FF MAX",
+            category: "esp",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-health-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER ESP HEALTH BAR (200 HP GRADIENT + GLOW) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 5,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-radar-max",
+            name: "ESP RADAR 360 • FF MAX",
+            category: "esp",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-radar-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER ESP RADAR 360° SWEEP ARROWS • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 6,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-wukong-max",
+            name: "ESP WUKONG • FF MAX",
+            category: "esp",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-wukong-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER ESP WUKONG / CAMOUFLAGE VISIBILITY • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 7,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "danger-esp-weapons-max",
+            name: "ESP WEAPONS • FF MAX",
+            category: "esp",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/danger-esp-weapons-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DANGER ESP ACTIVE WEAPON NAME & ICON • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 8,
             enabled: true,
             paused: false
         )
@@ -1325,6 +1847,34 @@ enum EmbeddedAimPackageVault {
         case "walter-drag-antena-normal": return UUID(uuidString: "612D8B49-75BE-4E87-89E0-DBA572DB6B58")
         case "walter-pecho-antena-normal": return UUID(uuidString: "367C693D-A6D4-466D-B379-94E205655A3A")
         case "walter-cuello-sin-antena-max": return UUID(uuidString: "4D69CAFB-9927-40F7-BDC4-482C2933215F")
+        case "danger-silent-aim-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000001")
+        case "danger-aimbot-lite-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000002")
+        case "danger-aimbot-rage-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000003")
+        case "danger-autofire-v2-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000004")
+        case "danger-full-headshot-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000005")
+        case "danger-kill-in-chest-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000006")
+        case "danger-silent-aim-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000001")
+        case "danger-aimbot-lite-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000002")
+        case "danger-aimbot-rage-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000003")
+        case "danger-autofire-v2-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000004")
+        case "danger-full-headshot-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000005")
+        case "danger-kill-in-chest-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000006")
+        case "danger-esp-lines-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000001")
+        case "danger-esp-box-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000002")
+        case "danger-esp-filled-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000003")
+        case "danger-esp-name-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000004")
+        case "danger-esp-health-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000005")
+        case "danger-esp-radar-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000006")
+        case "danger-esp-wukong-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000007")
+        case "danger-esp-weapons-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000008")
+        case "danger-esp-lines-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000001")
+        case "danger-esp-box-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000002")
+        case "danger-esp-filled-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000003")
+        case "danger-esp-name-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000004")
+        case "danger-esp-health-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000005")
+        case "danger-esp-radar-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000006")
+        case "danger-esp-wukong-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000007")
+        case "danger-esp-weapons-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000008")
         default:
             if let match = builtinEntries.first(where: { $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame }) {
                 return projectID(for: match)
@@ -1350,6 +1900,34 @@ enum EmbeddedAimPackageVault {
         case "walter-drag-antena-normal": return Data(base64Encoded: dragAntenaChunks.joined())
         case "walter-pecho-antena-normal": return Data(base64Encoded: pechoAntenaChunks.joined())
         case "walter-cuello-sin-antena-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-silent-aim-normal": return Data(base64Encoded: balasMagicasAntenaChunks.joined())
+        case "danger-aimbot-lite-normal": return Data(base64Encoded: cuelloSinAntenaNormalChunks.joined())
+        case "danger-aimbot-rage-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
+        case "danger-autofire-v2-normal": return Data(base64Encoded: dragAntenaChunks.joined())
+        case "danger-full-headshot-normal": return Data(base64Encoded: dragAntenaChunks.joined())
+        case "danger-kill-in-chest-normal": return Data(base64Encoded: pechoAntenaChunks.joined())
+        case "danger-silent-aim-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-aimbot-lite-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-aimbot-rage-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-autofire-v2-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-full-headshot-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-kill-in-chest-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-esp-lines-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
+        case "danger-esp-box-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
+        case "danger-esp-filled-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
+        case "danger-esp-name-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
+        case "danger-esp-health-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
+        case "danger-esp-radar-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
+        case "danger-esp-wukong-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
+        case "danger-esp-weapons-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
+        case "danger-esp-lines-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-esp-box-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-esp-filled-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-esp-name-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-esp-health-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-esp-radar-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-esp-wukong-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-esp-weapons-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
         default:
             if let match = builtinEntries.first(where: { $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame }) {
                 return rawData(for: match)
@@ -1359,7 +1937,7 @@ enum EmbeddedAimPackageVault {
     }
 
     static func tryUnlockBuiltinPackages(passwords: [String]) {
-        // All 6 embedded packages are unlocked (isPasswordProtected == false).
+        // All embedded packages are unlocked.
     }
 
     private static let cuelloAntenaChunks: [String] = [
@@ -4598,7 +5176,7 @@ enum EmbeddedAimPackageVault {
         }
         return PatchProject(
             id: projectUUID,
-            name: base.name,
+            name: remote.name,
             createdAt: base.createdAt,
             updatedAt: base.updatedAt,
             bundleIdentifiers: [targetBundle],

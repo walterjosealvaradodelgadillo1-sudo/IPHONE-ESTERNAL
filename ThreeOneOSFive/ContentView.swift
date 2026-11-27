@@ -26,24 +26,17 @@ struct ContentView: View {
     @AppStorage("vesper.selectedPatchGame") private var selectedPatchGame = "normal"
     @AppStorage("vesper.selectedBodyWeaponsCategory") private var selectedBodyWeaponsCategory = "body"
     @AppStorage("keepPatchesActiveAfterExit") private var keepPatchesActiveAfterExit = true
-    @AppStorage("danger.aim.fov") private var dangerAimFov: Double = 60
+    @AppStorage("danger.aim.fov") private var dangerAimFov: Double = 120
     @AppStorage("danger.aim.rageFovPct") private var dangerRageFovPct: Double = 100
-    @AppStorage("danger.aim.headRate") private var dangerHeadRate: Double = 5
-    @AppStorage("danger.aim.chestRate") private var dangerChestRate: Double = 5
+    @AppStorage("danger.aim.headRate") private var dangerHeadRate: Double = 8
+    @AppStorage("danger.aim.chestRate") private var dangerChestRate: Double = 2
     @AppStorage("danger.aim.rageDistance") private var dangerRageDistance: Double = 250
-    @AppStorage("danger.aim.rageSmooth") private var dangerRageSmooth: Double = 0
+    @AppStorage("danger.aim.rageSmooth") private var dangerRageSmooth: Double = 10
     @AppStorage("danger.aim.visibleStrength") private var dangerVisibleStrength: Double = 1.0
     @AppStorage("danger.aim.ignoreKnocked") private var dangerIgnoreKnocked = true
     @AppStorage("danger.aim.silent360") private var dangerSilentMode360 = true
-    @AppStorage("danger.aim.showFovCircle") private var dangerShowFovCircle = true
-    @AppStorage("danger.esp.lineType") private var dangerEspLineType = 0
-    @AppStorage("danger.esp.lineThickness") private var dangerEspLineThickness: Double = 1.8
-    @AppStorage("danger.esp.boxType") private var dangerEspBoxType = 0
-    @AppStorage("danger.esp.healthPos") private var dangerEspHealthPos = 0
-    @AppStorage("danger.esp.autoRefresh") private var dangerEspAutoRefresh = true
-    @AppStorage("danger.esp.refreshDelay") private var dangerEspRefreshDelay: Double = 10
-    @AppStorage("danger.esp.rgbMode") private var dangerEspRgbMode = false
-    @AppStorage("danger.esp.themeIndex") private var dangerEspThemeIndex = 0
+    @AppStorage("danger.aim.antennaEnabled") private var dangerAntennaEnabled = true
+    @AppStorage("danger.aim.liveOverrideAll") private var dangerLiveOverrideAll = true
     private let fileNames: [String] = []
     private let normalPatchFiles: [String] = []
     private let maxPatchFiles: [String] = []
@@ -71,28 +64,20 @@ struct ContentView: View {
         return remoteIsActive || localIsActive
     }
 
-    private var selectedEspPatchIsActive: Bool {
-        let bundleID = selectedPatchBundleID
-        return patchStore.remoteEntries(category: "esp", bundleID: bundleID)
-            .contains { patchStore.isRemotePatchActive($0) }
-    }
-
     var body: some View {
         TabView(selection: $selectedAppTab) {
             appTab(title: "WALTER X CHEAT • \(appLanguage.text("vesper.tab.aim"))", tabTitle: appLanguage.text("vesper.tab.aim"), icon: "scope") { aimTab }
                 .tag(0)
-            appTab(title: "WALTER X CHEAT • ESP", tabTitle: "ESP", icon: "eye.fill") { espTab }
-                .tag(1)
             appTab(title: "WALTER X CHEAT • HOLOGRAM", tabTitle: "HOLOGRAM", icon: "cube.transparent") { bodyWeaponsTab }
-                .tag(2)
+                .tag(1)
             appTab(title: "WALTER X CHEAT • \(appLanguage.text("vesper.tab.skin_mod"))", tabTitle: appLanguage.text("vesper.tab.skin_mod"), icon: "sparkles") { skinModTab }
-                .tag(3)
+                .tag(2)
             appTab(title: "WALTER X CHEAT • \(appLanguage.text("vesper.tab.compatibility"))", tabTitle: appLanguage.text("vesper.tab.compatibility"), icon: "iphone") { supportedDeviceTab }
-                .tag(4)
+                .tag(3)
             appTab(title: "WALTER X CHEAT • \(appLanguage.text("vesper.tab.profile"))", tabTitle: appLanguage.text("vesper.tab.profile"), icon: "person.crop.circle") { profileTab }
-                .tag(5)
+                .tag(4)
             appTab(title: "WALTER X CHEAT • \(appLanguage.text("vesper.tab.developer"))", tabTitle: appLanguage.text("vesper.tab.developer"), icon: "person.crop.circle") { developerTab }
-                .tag(6)
+                .tag(5)
         }
         .preferredColorScheme(.dark)
         .tint(AppTheme.accent)
@@ -242,65 +227,10 @@ struct ContentView: View {
         }
     }
 
-    private var espTab: some View {
-        VStack(spacing: 16) {
-            gameIntro(
-                title: "WALTER X CHEAT • ESP",
-                subtitle: "DANGER PLAYERS ESP & RADAR 360",
-                icon: "eye.fill",
-                status: selectedEspPatchIsActive ? "ACTIVATED" : nil
-            )
-            if isAimActivationNoticeVisible {
-                Label("ESP MODULE ACTIVATED", systemImage: "checkmark.circle.fill")
-                    .font(.system(size: 11, weight: .black, design: .rounded))
-                    .tracking(0.7)
-                    .foregroundStyle(.green)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 11)
-                    .background(Color.green.opacity(0.12), in: Capsule())
-                    .overlay(Capsule().stroke(Color.green.opacity(0.42), lineWidth: 1))
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-            if isOriginalRestoredNoticeVisible {
-                originalRestoredBanner
-            }
-            patchGameSelector
-            dangerEspPreviewCard
-            patchOptions(
-                files: [],
-                category: "esp",
-                sectionTitle: selectedPatchGameTitle,
-                targetTitle: selectedPatchTargetTitle,
-                targetBundleID: selectedPatchBundleID
-            )
-            dangerEspSettingsCard
-            gameLaunchPanel
-        }
-    }
-
-    private var dangerThemeColors: [(name: String, color: Color)] {
-        [
-            ("CYAN", Color(red: 0.0, green: 0.78, blue: 1.0)),
-            ("BLUE", Color(red: 0.25, green: 0.65, blue: 1.0)),
-            ("PURPLE", Color(red: 0.55, green: 0.35, blue: 1.0)),
-            ("GREEN", Color(red: 0.15, green: 0.85, blue: 0.55)),
-            ("ORANGE", Color(red: 1.0, green: 0.55, blue: 0.15)),
-            ("PINK", Color(red: 1.0, green: 0.30, blue: 0.55)),
-            ("TEAL", Color(red: 0.20, green: 0.90, blue: 0.90)),
-            ("WHITE", Color(red: 0.92, green: 0.95, blue: 1.0))
-        ]
-    }
-
-    private var activeDangerEspColor: Color {
-        let index = min(max(dangerEspThemeIndex, 0), dangerThemeColors.count - 1)
-        return dangerThemeColors[index].color
-    }
-
     private var dangerAimSettingsCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                panelTitle("DANGER • AIM SETTINGS", icon: "slider.horizontal.3")
+                panelTitle("DANGER • AIM SETTINGS (100% REAL)", icon: "slider.horizontal.3")
                 Spacer()
                 Text(selectedPatchTargetTitle)
                     .font(.system(size: 8, weight: .black, design: .rounded))
@@ -313,7 +243,7 @@ struct ContentView: View {
 
             VStack(spacing: 12) {
                 dangerSliderRow(
-                    title: "FOV RADIUS",
+                    title: "FOV RADIUS • HITBOX SCALE",
                     valueText: "\(Int(dangerAimFov)) px",
                     value: $dangerAimFov,
                     range: 0...400,
@@ -321,7 +251,7 @@ struct ContentView: View {
                     color: AppTheme.accent
                 )
                 dangerSliderRow(
-                    title: "RAGE FOV %",
+                    title: "RAGE FOV % • LOCK MULTIPLIER",
                     valueText: "\(Int(dangerRageFovPct))%",
                     value: $dangerRageFovPct,
                     range: 0...200,
@@ -329,7 +259,7 @@ struct ContentView: View {
                     color: AppTheme.secondaryAccent
                 )
                 dangerSliderRow(
-                    title: "HEAD RATE",
+                    title: "HEAD RATE • NECK/HEAD LOCK",
                     valueText: "\(Int(dangerHeadRate)) / 10",
                     value: $dangerHeadRate,
                     range: 0...10,
@@ -337,7 +267,7 @@ struct ContentView: View {
                     color: AppTheme.accent
                 )
                 dangerSliderRow(
-                    title: "CHEST RATE",
+                    title: "CHEST RATE • COVERHIT BLEND",
                     valueText: "\(Int(dangerChestRate)) / 10",
                     value: $dangerChestRate,
                     range: 0...10,
@@ -345,7 +275,7 @@ struct ContentView: View {
                     color: AppTheme.secondaryAccent
                 )
                 dangerSliderRow(
-                    title: "RAGE DISTANCE",
+                    title: "RAGE DISTANCE • VECTOR REACH",
                     valueText: "\(Int(dangerRageDistance)) m",
                     value: $dangerRageDistance,
                     range: 10...1000,
@@ -353,7 +283,7 @@ struct ContentView: View {
                     color: AppTheme.accent
                 )
                 dangerSliderRow(
-                    title: "RAGE SMOOTH",
+                    title: "RAGE SMOOTH • VERTICAL DRAG PULL",
                     valueText: String(format: "%.1f", dangerRageSmooth),
                     value: $dangerRageSmooth,
                     range: 0...50,
@@ -361,7 +291,7 @@ struct ContentView: View {
                     color: AppTheme.secondaryAccent
                 )
                 dangerSliderRow(
-                    title: "VISIBLE STRENGTH",
+                    title: "VISIBLE STRENGTH • COLLIDER GAIN",
                     valueText: String(format: "%.2f", dangerVisibleStrength),
                     value: $dangerVisibleStrength,
                     range: 0...1,
@@ -374,274 +304,82 @@ struct ContentView: View {
 
             VStack(spacing: 8) {
                 dangerToggleRow(
-                    title: "IGNORE KNOCKED PLAYERS",
-                    subtitle: "Skip downed targets during Aimbot Rage / Silent lock",
-                    icon: "person.crop.circle.badge.xmark",
-                    isOn: $dangerIgnoreKnocked
+                    title: "ANTENA 3D LASER EN PARED",
+                    subtitle: "Activa el haz 3D de 500m en el hueso del avatar (Male & Female)",
+                    icon: "antenna.radiowaves.left.and.right",
+                    isOn: $dangerAntennaEnabled
                 )
                 dangerToggleRow(
-                    title: "SILENT AIM 360° MODE",
-                    subtitle: "Full 360° telemetry lock without camera snap",
+                    title: "SILENT AIM 360° VECTOR",
+                    subtitle: "Expande la matriz de Balas Mágicas / Silent Aim a 360°",
                     icon: "scope",
                     isOn: $dangerSilentMode360
                 )
                 dangerToggleRow(
-                    title: "SHOW FOV OVERLAY CIRCLE",
-                    subtitle: "Display live FOV radius indicator (\(Int(dangerAimFov)) px)",
-                    icon: "circle.dashed",
-                    isOn: $dangerShowFovCircle
+                    title: "IGNORE KNOCKED PLAYERS",
+                    subtitle: "Prioriza enemigos de pie en la matriz de colisión",
+                    icon: "person.crop.circle.badge.xmark",
+                    isOn: $dangerIgnoreKnocked
+                )
+                dangerToggleRow(
+                    title: "CALIBRAR TODOS LOS AIM CON SLIDERS",
+                    subtitle: "Aplica estos ajustes en directo sobre el archivo UnityFS del juego",
+                    icon: "cpu.fill",
+                    isOn: $dangerLiveOverrideAll
                 )
             }
+
+            Button {
+                applyLiveDangerAimCalibration()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "bolt.shield.fill")
+                        .font(.system(size: 14, weight: .black))
+                    Text(selectedAimPatchIsActive ? "RE-INYECTAR CALIBRACIÓN DANGER AL AIM ACTIVO" : "GUARDAR CALIBRACIÓN DANGER PARA EL PRÓXIMO AIM")
+                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .tracking(0.8)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                }
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(
+                    LinearGradient(colors: [AppTheme.accent, AppTheme.secondaryAccent], startPoint: .leading, endPoint: .trailing),
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(patchOperationBusy)
         }
         .padding(16)
         .background(AppTheme.referenceCard, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(AppTheme.accent.opacity(0.32), lineWidth: 1))
     }
 
-    private var dangerEspPreviewCard: some View {
-        let themeColor = activeDangerEspColor
-        let lineTypes = ["TOP", "CENTRE", "BOTTOM"]
-        let boxTypes = ["SHADOW", "FULL BOX"]
-        let healthPositions = ["LEFT", "RIGHT", "TOP", "BOTTOM"]
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                panelTitle("LIVE ESP & RADAR 360 PREVIEW", icon: "dot.radiowaves.left.and.right")
-                Spacer()
-                Text(selectedEspPatchIsActive ? "TELEMETRY LIVE" : "READY • \(selectedPatchGameTitle)")
-                    .font(.system(size: 8, weight: .black, design: .rounded))
-                    .tracking(0.8)
-                    .foregroundStyle(selectedEspPatchIsActive ? Color.green : themeColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background((selectedEspPatchIsActive ? Color.green : themeColor).opacity(0.14), in: Capsule())
-            }
-
-            HStack(spacing: 12) {
-                // 360 Radar preview
-                ZStack {
-                    Circle()
-                        .fill(Color.black.opacity(0.65))
-                    ForEach(1..<4) { ring in
-                        Circle()
-                            .stroke(themeColor.opacity(0.24), lineWidth: 1)
-                            .frame(width: CGFloat(ring) * 32, height: CGFloat(ring) * 32)
-                    }
-                    Rectangle()
-                        .fill(themeColor.opacity(0.22))
-                        .frame(width: 1, height: 104)
-                    Rectangle()
-                        .fill(themeColor.opacity(0.22))
-                        .frame(width: 104, height: 1)
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 6, height: 6)
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 7, height: 7)
-                        .offset(x: -22, y: -26)
-                    Circle()
-                        .fill(themeColor)
-                        .frame(width: 7, height: 7)
-                        .offset(x: 28, y: -14)
-                    Circle()
-                        .fill(Color.orange)
-                        .frame(width: 6, height: 6)
-                        .offset(x: 14, y: 30)
-                }
-                .frame(width: 112, height: 112)
-                .overlay(Circle().stroke(themeColor.opacity(0.72), lineWidth: 1.6))
-
-                // 2D Player ESP Box + Health + Snapline + Weapon tag preview
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.black.opacity(0.58))
-                    VStack(spacing: 4) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "bolt.shield.fill")
-                                .font(.system(size: 8, weight: .black))
-                                .foregroundStyle(themeColor)
-                            Text("ENEMY • MP40 COBRA [42m]")
-                                .font(.system(size: 8, weight: .black, design: .monospaced))
-                                .foregroundStyle(.white)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                        }
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Color.black.opacity(0.75), in: Capsule())
-                        .overlay(Capsule().stroke(themeColor.opacity(0.55), lineWidth: 0.8))
-
-                        HStack(spacing: 6) {
-                            if dangerEspHealthPos == 0 {
-                                Capsule()
-                                    .fill(LinearGradient(colors: [.green, .yellow], startPoint: .top, endPoint: .bottom))
-                                    .frame(width: 4, height: 54)
-                            }
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                    .fill(themeColor.opacity(dangerEspBoxType == 0 ? 0.14 : 0.06))
-                                    .frame(width: 44, height: 54)
-                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                    .stroke(themeColor, lineWidth: CGFloat(min(max(dangerEspLineThickness, 1.0), 3.5)))
-                                    .frame(width: 44, height: 54)
-                                Image(systemName: "figure.stand")
-                                    .font(.system(size: 26, weight: .bold))
-                                    .foregroundStyle(.white.opacity(0.82))
-                            }
-                            if dangerEspHealthPos == 1 {
-                                Capsule()
-                                    .fill(LinearGradient(colors: [.green, .yellow], startPoint: .top, endPoint: .bottom))
-                                    .frame(width: 4, height: 54)
-                            }
-                        }
-
-                        Text("LINE: \(lineTypes[min(max(dangerEspLineType, 0), 2)]) • BOX: \(boxTypes[min(max(dangerEspBoxType, 0), 1)]) • HP: \(healthPositions[min(max(dangerEspHealthPos, 0), 3)])")
-                            .font(.system(size: 7, weight: .bold, design: .monospaced))
-                            .foregroundStyle(themeColor.opacity(0.9))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.65)
-                    }
-                    .padding(8)
-                }
-                .frame(maxWidth: .infinity, minHeight: 112, maxHeight: 112)
-                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(themeColor.opacity(0.38), lineWidth: 1))
-            }
+    private func applyLiveDangerAimCalibration() {
+        let impact = UIImpactFeedbackGenerator(style: .heavy)
+        impact.impactOccurred()
+        let bundleID = selectedPatchBundleID
+        let activeRemotes = patchStore.remoteEntries(category: "aim", bundleID: bundleID)
+            .filter { patchStore.isRemotePatchActive($0) }
+        guard !activeRemotes.isEmpty, !patchOperationBusy else {
+            presentAimActivationNotification()
+            return
         }
-        .padding(16)
-        .background(AppTheme.referenceCard, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(themeColor.opacity(0.35), lineWidth: 1))
-    }
-
-    private var dangerEspSettingsCard: some View {
-        let themeColor = activeDangerEspColor
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                panelTitle("DANGER • ESP SETTINGS", icon: "paintbrush.pointed.fill")
-                Spacer()
-                Text(selectedPatchTargetTitle)
-                    .font(.system(size: 8, weight: .black, design: .rounded))
-                    .tracking(0.8)
-                    .foregroundStyle(themeColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(themeColor.opacity(0.14), in: Capsule())
-            }
-
-            // Lines Type Selector
-            VStack(alignment: .leading, spacing: 6) {
-                Text("LINES ORIGIN TYPE")
-                    .font(.system(size: 9, weight: .black, design: .rounded))
-                    .tracking(0.9)
-                    .foregroundStyle(AppTheme.paper.opacity(0.68))
-                HStack(spacing: 8) {
-                    dangerSegmentButton(title: "TOP", isSelected: dangerEspLineType == 0, color: themeColor) { dangerEspLineType = 0 }
-                    dangerSegmentButton(title: "CENTRE", isSelected: dangerEspLineType == 1, color: themeColor) { dangerEspLineType = 1 }
-                    dangerSegmentButton(title: "BOTTOM", isSelected: dangerEspLineType == 2, color: themeColor) { dangerEspLineType = 2 }
+        patchOperationBusy = true
+        Task { @MainActor in
+            for remote in activeRemotes {
+                if let project = EmbeddedAimPackageVault.resolvedProject(for: remote) {
+                    _ = try? await Task.detached(priority: .userInitiated) {
+                        try DevicePatchService.apply(project: project)
+                    }.value
                 }
             }
-
-            // Box Type Selector
-            VStack(alignment: .leading, spacing: 6) {
-                Text("BOX RENDER STYLE")
-                    .font(.system(size: 9, weight: .black, design: .rounded))
-                    .tracking(0.9)
-                    .foregroundStyle(AppTheme.paper.opacity(0.68))
-                HStack(spacing: 8) {
-                    dangerSegmentButton(title: "SHADOW BOX", isSelected: dangerEspBoxType == 0, color: themeColor) { dangerEspBoxType = 0 }
-                    dangerSegmentButton(title: "FULL 2D BOX", isSelected: dangerEspBoxType == 1, color: themeColor) { dangerEspBoxType = 1 }
-                }
-            }
-
-            // Health Bar Position Selector
-            VStack(alignment: .leading, spacing: 6) {
-                Text("HEALTH BAR POSITION")
-                    .font(.system(size: 9, weight: .black, design: .rounded))
-                    .tracking(0.9)
-                    .foregroundStyle(AppTheme.paper.opacity(0.68))
-                HStack(spacing: 6) {
-                    dangerSegmentButton(title: "LEFT", isSelected: dangerEspHealthPos == 0, color: themeColor) { dangerEspHealthPos = 0 }
-                    dangerSegmentButton(title: "RIGHT", isSelected: dangerEspHealthPos == 1, color: themeColor) { dangerEspHealthPos = 1 }
-                    dangerSegmentButton(title: "TOP", isSelected: dangerEspHealthPos == 2, color: themeColor) { dangerEspHealthPos = 2 }
-                    dangerSegmentButton(title: "BOTTOM", isSelected: dangerEspHealthPos == 3, color: themeColor) { dangerEspHealthPos = 3 }
-                }
-            }
-
-            dangerSliderRow(
-                title: "LINES THICKNESS",
-                valueText: String(format: "%.1f px", dangerEspLineThickness),
-                value: $dangerEspLineThickness,
-                range: 0.5...10.0,
-                step: 0.5,
-                color: themeColor
-            )
-
-            dangerSliderRow(
-                title: "AUTO REFRESH DELAY",
-                valueText: "\(Int(dangerEspRefreshDelay)) ms",
-                value: $dangerEspRefreshDelay,
-                range: 1...250,
-                step: 1,
-                color: themeColor
-            )
-
-            // Quick Color Themes from danger
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("FULL ESP QUICK THEME")
-                        .font(.system(size: 9, weight: .black, design: .rounded))
-                        .tracking(0.9)
-                        .foregroundStyle(AppTheme.paper.opacity(0.68))
-                    Spacer()
-                    Text(dangerThemeColors[min(max(dangerEspThemeIndex, 0), dangerThemeColors.count - 1)].name)
-                        .font(.system(size: 9, weight: .black, design: .monospaced))
-                        .foregroundStyle(themeColor)
-                }
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(Array(dangerThemeColors.enumerated()), id: \.offset) { index, item in
-                            let isSelected = dangerEspThemeIndex == index
-                            Button {
-                                dangerEspThemeIndex = index
-                            } label: {
-                                HStack(spacing: 5) {
-                                    Circle()
-                                        .fill(item.color)
-                                        .frame(width: 10, height: 10)
-                                    Text(item.name)
-                                        .font(.system(size: 9, weight: .black, design: .rounded))
-                                        .foregroundStyle(isSelected ? .white : AppTheme.paper.opacity(0.65))
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .background(isSelected ? item.color.opacity(0.24) : AppTheme.ink.opacity(0.65), in: Capsule())
-                                .overlay(Capsule().stroke(isSelected ? item.color : Color.white.opacity(0.12), lineWidth: isSelected ? 1.4 : 0.8))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-            }
-
-            Divider().overlay(AppTheme.paper.opacity(0.12))
-
-            VStack(spacing: 8) {
-                dangerToggleRow(
-                    title: "AUTO REFRESH ENTITIES",
-                    subtitle: "Continuously sync player coordinates and Wukong/weapon state",
-                    icon: "arrow.triangle.2.circlepath",
-                    isOn: $dangerEspAutoRefresh
-                )
-                dangerToggleRow(
-                    title: "RGB CHROMA CYCLE",
-                    subtitle: "Animate ESP lines, boxes, and radar sweep with dynamic chroma",
-                    icon: "sparkles",
-                    isOn: $dangerEspRgbMode
-                )
-            }
+            presentAimActivationNotification()
+            PatchAudioFeedback.bypassActivated()
+            patchOperationBusy = false
         }
-        .padding(16)
-        .background(AppTheme.referenceCard, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(themeColor.opacity(0.32), lineWidth: 1))
     }
 
     private func dangerSliderRow(
@@ -703,24 +441,6 @@ struct ContentView: View {
         }
         .padding(10)
         .background(AppTheme.ink.opacity(0.55), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
-    }
-
-    private func dangerSegmentButton(
-        title: String,
-        isSelected: Bool,
-        color: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 9, weight: .black, design: .rounded))
-                .tracking(0.6)
-                .foregroundStyle(isSelected ? .white : AppTheme.paper.opacity(0.62))
-                .frame(maxWidth: .infinity, minHeight: 32)
-                .background(isSelected ? color.opacity(0.24) : AppTheme.ink.opacity(0.62), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(isSelected ? color : Color.white.opacity(0.08), lineWidth: isSelected ? 1.2 : 0.8))
-        }
-        .buttonStyle(.plain)
     }
 
     private var bodyWeaponsTab: some View {

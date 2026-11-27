@@ -257,7 +257,14 @@ final class PatchProjectStore: ObservableObject {
     }
 
     func preparedRemoteProject(for remote: RemotePatch) -> PatchProject? {
-        preparedRemoteProjects[remotePatchKey(for: remote)]
+        if EmbeddedAimPackageVault.isBuiltin(remote),
+           let fresh = EmbeddedAimPackageVault.resolvedProject(for: remote) {
+            let key = remotePatchKey(for: remote)
+            preparedRemoteProjects[key] = fresh
+            preparedRemotePatchKeys.insert(key)
+            return fresh
+        }
+        return preparedRemoteProjects[remotePatchKey(for: remote)]
     }
 
     func remoteProjectID(for remote: RemotePatch) -> UUID? {
@@ -1310,6 +1317,24 @@ enum EmbeddedAimPackageVault {
             paused: false
         ),
         RemotePatch(
+            id: "walter-cuello-antena-max",
+            name: "CUELLO - ANTENA • FF MAX",
+            category: "aim",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/walter-cuello-antena-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • CUELLO - ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 1,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
             id: "walter-cuello-sin-antena-max",
             name: "CUELLO SIN ANTENA • FF MAX",
             category: "aim",
@@ -1323,7 +1348,61 @@ enum EmbeddedAimPackageVault {
             download_url: "https://api.vesperdash.com/patches/walter-cuello-sin-antena-max.3105",
             image_url: nil,
             status_text: "FREE FIRE MAX • CUELLO SIN ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 1,
+            sort_order: 2,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "walter-balas-magicas-antena-max",
+            name: "BALAS MAGICAS - ANTENA • FF MAX",
+            category: "aim",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/walter-balas-magicas-antena-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • BALAS MAGICAS - ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 3,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "walter-drag-antena-max",
+            name: "DRAG - ANTENA • FF MAX",
+            category: "aim",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/walter-drag-antena-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • DRAG - ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 4,
+            enabled: true,
+            paused: false
+        ),
+        RemotePatch(
+            id: "walter-pecho-antena-max",
+            name: "PECHO - ANTENA • FF MAX",
+            category: "aim",
+            game: "max",
+            bundle_id: "com.dts.freefiremax",
+            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
+            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
+            filename: "CUELLO SIN ANTENA FF MAX.3105",
+            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
+            version: "2.0",
+            download_url: "https://api.vesperdash.com/patches/walter-pecho-antena-max.3105",
+            image_url: nil,
+            status_text: "FREE FIRE MAX • PECHO - ANTENA SRC • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 5,
             enabled: true,
             paused: false
         ),
@@ -1335,12 +1414,12 @@ enum EmbeddedAimPackageVault {
             bundle_id: "com.dts.freefireth",
             target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Balas magicas - antena.3105",
-            sha256: "c14e8c307d460a9c1de4989b620b2c525e5fd68156cd7ac5cd389f6bc9613a4c",
+            filename: "CUELLO SIN ANTENA.3105",
+            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
             version: "2.0",
             download_url: "https://api.vesperdash.com/patches/danger-silent-aim-normal.3105",
             image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER SILENT AIM (180°/360° VECTOR) • TAP TO ACTIVATE / DEACTIVATE",
+            status_text: "FREE FIRE NORMAL • DANGER SILENT AIM (180°/360° HITBOX VECTOR) • TAP TO ACTIVATE / DEACTIVATE",
             sort_order: 6,
             enabled: true,
             paused: false
@@ -1371,8 +1450,8 @@ enum EmbeddedAimPackageVault {
             bundle_id: "com.dts.freefireth",
             target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Cuello - Antena.3105",
-            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
+            filename: "CUELLO SIN ANTENA.3105",
+            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
             version: "2.0",
             download_url: "https://api.vesperdash.com/patches/danger-aimbot-rage-normal.3105",
             image_url: nil,
@@ -1389,12 +1468,12 @@ enum EmbeddedAimPackageVault {
             bundle_id: "com.dts.freefireth",
             target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Drag - Antena.3105",
-            sha256: "d94d4c44ff6b5068ebe663dca735a26398c559b4bfa891e3e9731a3c10eafebe",
+            filename: "CUELLO SIN ANTENA.3105",
+            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
             version: "2.0",
             download_url: "https://api.vesperdash.com/patches/danger-autofire-v2-normal.3105",
             image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER AUTO FIRE V2 (180MS PULSE ENGINE) • TAP TO ACTIVATE / DEACTIVATE",
+            status_text: "FREE FIRE NORMAL • DANGER AUTO FIRE V2 (FAST TRIGGER SNAP) • TAP TO ACTIVATE / DEACTIVATE",
             sort_order: 9,
             enabled: true,
             paused: false
@@ -1407,8 +1486,8 @@ enum EmbeddedAimPackageVault {
             bundle_id: "com.dts.freefireth",
             target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Drag - Antena.3105",
-            sha256: "d94d4c44ff6b5068ebe663dca735a26398c559b4bfa891e3e9731a3c10eafebe",
+            filename: "CUELLO SIN ANTENA.3105",
+            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
             version: "2.0",
             download_url: "https://api.vesperdash.com/patches/danger-full-headshot-normal.3105",
             image_url: nil,
@@ -1425,8 +1504,8 @@ enum EmbeddedAimPackageVault {
             bundle_id: "com.dts.freefireth",
             target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
             target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Pecho - Antena.3105",
-            sha256: "649bbe8923353fc6854a6c9659df730a753f4504707fcb6cb5b2a34e98983467",
+            filename: "CUELLO SIN ANTENA.3105",
+            sha256: "54d9695e3085cf32ef84411964de4c65b19db82926e381e07990d4e4882a5e96",
             version: "2.0",
             download_url: "https://api.vesperdash.com/patches/danger-kill-in-chest-normal.3105",
             image_url: nil,
@@ -1448,8 +1527,8 @@ enum EmbeddedAimPackageVault {
             version: "2.0",
             download_url: "https://api.vesperdash.com/patches/danger-silent-aim-max.3105",
             image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER SILENT AIM (180°/360° VECTOR) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 2,
+            status_text: "FREE FIRE MAX • DANGER SILENT AIM (180°/360° HITBOX VECTOR) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 6,
             enabled: true,
             paused: false
         ),
@@ -1467,7 +1546,7 @@ enum EmbeddedAimPackageVault {
             download_url: "https://api.vesperdash.com/patches/danger-aimbot-lite-max.3105",
             image_url: nil,
             status_text: "FREE FIRE MAX • DANGER AIMBOT LITE (LEGIT HEAD COLLIDER) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 3,
+            sort_order: 7,
             enabled: true,
             paused: false
         ),
@@ -1485,7 +1564,7 @@ enum EmbeddedAimPackageVault {
             download_url: "https://api.vesperdash.com/patches/danger-aimbot-rage-max.3105",
             image_url: nil,
             status_text: "FREE FIRE MAX • DANGER AIMBOT RAGE (FOV + SMOOTH ROTATION) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 4,
+            sort_order: 8,
             enabled: true,
             paused: false
         ),
@@ -1502,8 +1581,8 @@ enum EmbeddedAimPackageVault {
             version: "2.0",
             download_url: "https://api.vesperdash.com/patches/danger-autofire-v2-max.3105",
             image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER AUTO FIRE V2 (180MS PULSE ENGINE) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 5,
+            status_text: "FREE FIRE MAX • DANGER AUTO FIRE V2 (FAST TRIGGER SNAP) • TAP TO ACTIVATE / DEACTIVATE",
+            sort_order: 9,
             enabled: true,
             paused: false
         ),
@@ -1521,7 +1600,7 @@ enum EmbeddedAimPackageVault {
             download_url: "https://api.vesperdash.com/patches/danger-full-headshot-max.3105",
             image_url: nil,
             status_text: "FREE FIRE MAX • DANGER FULL HEADSHOT (HEAD TRACKING FOV) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 6,
+            sort_order: 10,
             enabled: true,
             paused: false
         ),
@@ -1539,295 +1618,7 @@ enum EmbeddedAimPackageVault {
             download_url: "https://api.vesperdash.com/patches/danger-kill-in-chest-max.3105",
             image_url: nil,
             status_text: "FREE FIRE MAX • DANGER KILL IN CHEST (COVERHIT MATRIX) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 7,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-lines-normal",
-            name: "ESP LINES • FF NORMAL",
-            category: "esp",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Cuello - Antena.3105",
-            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-lines-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER ESP SNAPLINES (TOP / CENTRE / BOTTOM) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 1,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-box-normal",
-            name: "ESP BOX • FF NORMAL",
-            category: "esp",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Cuello - Antena.3105",
-            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-box-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER ESP 2D BOX (SHADOW CORNERED / FULL BOX) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 2,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-filled-normal",
-            name: "ESP FILLED • FF NORMAL",
-            category: "esp",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Cuello - Antena.3105",
-            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-filled-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER ESP FILLED BOX (TRANSLUCENT + RGB) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 3,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-name-normal",
-            name: "ESP NAME • FF NORMAL",
-            category: "esp",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Cuello - Antena.3105",
-            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-name-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER ESP PLAYER NAME + DISTANCE • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 4,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-health-normal",
-            name: "ESP HEALTH • FF NORMAL",
-            category: "esp",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Cuello - Antena.3105",
-            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-health-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER ESP HEALTH BAR (200 HP GRADIENT + GLOW) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 5,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-radar-normal",
-            name: "ESP RADAR 360 • FF NORMAL",
-            category: "esp",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Cuello - Antena.3105",
-            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-radar-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER ESP RADAR 360° SWEEP ARROWS • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 6,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-wukong-normal",
-            name: "ESP WUKONG • FF NORMAL",
-            category: "esp",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Cuello - Antena.3105",
-            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-wukong-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER ESP WUKONG / CAMOUFLAGE VISIBILITY • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 7,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-weapons-normal",
-            name: "ESP WEAPONS • FF NORMAL",
-            category: "esp",
-            game: "normal",
-            bundle_id: "com.dts.freefireth",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.U6Zffc4YIR3DslNj3cXvYGAqz58~3D"],
-            filename: "Cuello - Antena.3105",
-            sha256: "19847be877aa51eb52dd25911aa60e62a4bd308f4e23f0d26a73cb0761a1d695",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-weapons-normal.3105",
-            image_url: nil,
-            status_text: "FREE FIRE NORMAL • DANGER ESP ACTIVE WEAPON NAME & ICON • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 8,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-lines-max",
-            name: "ESP LINES • FF MAX",
-            category: "esp",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-lines-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER ESP SNAPLINES (TOP / CENTRE / BOTTOM) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 1,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-box-max",
-            name: "ESP BOX • FF MAX",
-            category: "esp",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-box-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER ESP 2D BOX (SHADOW CORNERED / FULL BOX) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 2,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-filled-max",
-            name: "ESP FILLED • FF MAX",
-            category: "esp",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-filled-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER ESP FILLED BOX (TRANSLUCENT + RGB) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 3,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-name-max",
-            name: "ESP NAME • FF MAX",
-            category: "esp",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-name-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER ESP PLAYER NAME + DISTANCE • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 4,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-health-max",
-            name: "ESP HEALTH • FF MAX",
-            category: "esp",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-health-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER ESP HEALTH BAR (200 HP GRADIENT + GLOW) • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 5,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-radar-max",
-            name: "ESP RADAR 360 • FF MAX",
-            category: "esp",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-radar-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER ESP RADAR 360° SWEEP ARROWS • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 6,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-wukong-max",
-            name: "ESP WUKONG • FF MAX",
-            category: "esp",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-wukong-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER ESP WUKONG / CAMOUFLAGE VISIBILITY • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 7,
-            enabled: true,
-            paused: false
-        ),
-        RemotePatch(
-            id: "danger-esp-weapons-max",
-            name: "ESP WEAPONS • FF MAX",
-            category: "esp",
-            game: "max",
-            bundle_id: "com.dts.freefiremax",
-            target_path: "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D",
-            target_paths: ["Documents/contentcache/Compulsory/ios/gameassetbundles/avatar/assetindexer.YJ~2FW7EkU5pRkVg51NrKyx4LXid8~3D"],
-            filename: "CUELLO SIN ANTENA FF MAX.3105",
-            sha256: "dff2838fe373109ce938dafdf03e8d33c5b9841aba93c252eb7d7807c6b89d94",
-            version: "2.0",
-            download_url: "https://api.vesperdash.com/patches/danger-esp-weapons-max.3105",
-            image_url: nil,
-            status_text: "FREE FIRE MAX • DANGER ESP ACTIVE WEAPON NAME & ICON • TAP TO ACTIVATE / DEACTIVATE",
-            sort_order: 8,
+            sort_order: 11,
             enabled: true,
             paused: false
         )
@@ -1846,7 +1637,11 @@ enum EmbeddedAimPackageVault {
         case "walter-balas-magicas-antena-normal": return UUID(uuidString: "20718F02-5978-4383-B661-D80B21418C47")
         case "walter-drag-antena-normal": return UUID(uuidString: "612D8B49-75BE-4E87-89E0-DBA572DB6B58")
         case "walter-pecho-antena-normal": return UUID(uuidString: "367C693D-A6D4-466D-B379-94E205655A3A")
+        case "walter-cuello-antena-max": return UUID(uuidString: "4D69CAFB-9927-40F7-BDC4-482C29332150")
         case "walter-cuello-sin-antena-max": return UUID(uuidString: "4D69CAFB-9927-40F7-BDC4-482C2933215F")
+        case "walter-balas-magicas-antena-max": return UUID(uuidString: "4D69CAFB-9927-40F7-BDC4-482C29332151")
+        case "walter-drag-antena-max": return UUID(uuidString: "4D69CAFB-9927-40F7-BDC4-482C29332152")
+        case "walter-pecho-antena-max": return UUID(uuidString: "4D69CAFB-9927-40F7-BDC4-482C29332153")
         case "danger-silent-aim-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000001")
         case "danger-aimbot-lite-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000002")
         case "danger-aimbot-rage-normal": return UUID(uuidString: "D4A10001-1111-4000-8000-000000000003")
@@ -1859,22 +1654,6 @@ enum EmbeddedAimPackageVault {
         case "danger-autofire-v2-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000004")
         case "danger-full-headshot-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000005")
         case "danger-kill-in-chest-max": return UUID(uuidString: "D4A10002-2222-4000-8000-000000000006")
-        case "danger-esp-lines-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000001")
-        case "danger-esp-box-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000002")
-        case "danger-esp-filled-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000003")
-        case "danger-esp-name-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000004")
-        case "danger-esp-health-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000005")
-        case "danger-esp-radar-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000006")
-        case "danger-esp-wukong-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000007")
-        case "danger-esp-weapons-normal": return UUID(uuidString: "D4E10001-1111-4000-8000-000000000008")
-        case "danger-esp-lines-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000001")
-        case "danger-esp-box-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000002")
-        case "danger-esp-filled-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000003")
-        case "danger-esp-name-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000004")
-        case "danger-esp-health-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000005")
-        case "danger-esp-radar-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000006")
-        case "danger-esp-wukong-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000007")
-        case "danger-esp-weapons-max": return UUID(uuidString: "D4E10002-2222-4000-8000-000000000008")
         default:
             if let match = builtinEntries.first(where: { $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame }) {
                 return projectID(for: match)
@@ -1899,35 +1678,26 @@ enum EmbeddedAimPackageVault {
         case "walter-balas-magicas-antena-normal": return Data(base64Encoded: balasMagicasAntenaChunks.joined())
         case "walter-drag-antena-normal": return Data(base64Encoded: dragAntenaChunks.joined())
         case "walter-pecho-antena-normal": return Data(base64Encoded: pechoAntenaChunks.joined())
-        case "walter-cuello-sin-antena-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-silent-aim-normal": return Data(base64Encoded: balasMagicasAntenaChunks.joined())
-        case "danger-aimbot-lite-normal": return Data(base64Encoded: cuelloSinAntenaNormalChunks.joined())
-        case "danger-aimbot-rage-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
-        case "danger-autofire-v2-normal": return Data(base64Encoded: dragAntenaChunks.joined())
-        case "danger-full-headshot-normal": return Data(base64Encoded: dragAntenaChunks.joined())
-        case "danger-kill-in-chest-normal": return Data(base64Encoded: pechoAntenaChunks.joined())
-        case "danger-silent-aim-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-aimbot-lite-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-aimbot-rage-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-autofire-v2-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-full-headshot-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-kill-in-chest-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-esp-lines-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
-        case "danger-esp-box-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
-        case "danger-esp-filled-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
-        case "danger-esp-name-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
-        case "danger-esp-health-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
-        case "danger-esp-radar-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
-        case "danger-esp-wukong-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
-        case "danger-esp-weapons-normal": return Data(base64Encoded: cuelloAntenaChunks.joined())
-        case "danger-esp-lines-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-esp-box-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-esp-filled-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-esp-name-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-esp-health-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-esp-radar-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-esp-wukong-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
-        case "danger-esp-weapons-max": return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "walter-cuello-antena-max",
+             "walter-cuello-sin-antena-max",
+             "walter-balas-magicas-antena-max",
+             "walter-drag-antena-max",
+             "walter-pecho-antena-max":
+            return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        case "danger-silent-aim-normal",
+             "danger-aimbot-lite-normal",
+             "danger-aimbot-rage-normal",
+             "danger-autofire-v2-normal",
+             "danger-full-headshot-normal",
+             "danger-kill-in-chest-normal":
+            return Data(base64Encoded: cuelloSinAntenaNormalChunks.joined())
+        case "danger-silent-aim-max",
+             "danger-aimbot-lite-max",
+             "danger-aimbot-rage-max",
+             "danger-autofire-v2-max",
+             "danger-full-headshot-max",
+             "danger-kill-in-chest-max":
+            return Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
         default:
             if let match = builtinEntries.first(where: { $0.sha256.caseInsensitiveCompare(remote.sha256) == .orderedSame }) {
                 return rawData(for: match)
@@ -5127,13 +4897,19 @@ enum EmbeddedAimPackageVault {
         let targetBundle = remote.bundle_id
         let projectUUID = projectID(for: remote) ?? base.id
         let primaryPath = targetRelativePaths(for: remote).first ?? primaryRule.relativePath
+        let effectiveReplacementData = DangerAimUnityPatcher.patchedReplacementData(
+            for: remote,
+            defaultData: primaryRule.replacementData,
+            normalLZ4PackageData: Data(base64Encoded: cuelloSinAntenaNormalChunks.joined()),
+            maxLZ4PackageData: Data(base64Encoded: cuelloSinAntenaMaxChunks.joined())
+        )
         var rules: [PatchRule] = [
             PatchRule(
                 id: primaryRule.id,
                 bundleID: targetBundle,
                 relativePath: primaryPath,
                 replacementFilename: primaryRule.replacementFilename,
-                replacementData: primaryRule.replacementData
+                replacementData: effectiveReplacementData
             )
         ]
         let avatarDirRel = "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar"
@@ -5152,7 +4928,7 @@ enum EmbeddedAimPackageVault {
                             bundleID: targetBundle,
                             relativePath: candidateRel,
                             replacementFilename: entry,
-                            replacementData: primaryRule.replacementData
+                            replacementData: effectiveReplacementData
                         )
                     )
                     break
@@ -5183,5 +4959,436 @@ enum EmbeddedAimPackageVault {
             directories: directories,
             rules: rules
         )
+    }
+}
+
+enum DangerAimUnityPatcher {
+    private struct BoneTransformSpec {
+        var maleFloats: [Float]
+        var femaleFloats: [Float]
+        var useSpineTag: Bool
+        var antennaScale: Float
+    }
+
+    static func patchedReplacementData(
+        for remote: RemotePatch,
+        defaultData: Data,
+        normalLZ4PackageData: Data?,
+        maxLZ4PackageData: Data?
+    ) -> Data {
+        let defaults = UserDefaults.standard
+        let liveOverrideAll = defaults.bool(forKey: "danger.aim.liveOverrideAll")
+        let needsDynamicUnityPatch: Bool = {
+            if remote.id.hasPrefix("danger-") { return true }
+            switch remote.id {
+            case "walter-cuello-antena-max",
+                 "walter-balas-magicas-antena-max",
+                 "walter-drag-antena-max",
+                 "walter-pecho-antena-max":
+                return true
+            default:
+                return liveOverrideAll
+            }
+        }()
+        guard needsDynamicUnityPatch else {
+            return defaultData
+        }
+
+        let isMax = remote.bundle_id == "com.dts.freefiremax"
+        let baseUnityData: Data = {
+            if isMax,
+               let maxPkg = maxLZ4PackageData,
+               let decoded = try? PatchPackageCodec.decode(maxPkg, password: nil),
+               let rule = decoded.project.rules.first {
+                return rule.replacementData
+            }
+            if !isMax,
+               let normPkg = normalLZ4PackageData,
+               let decoded = try? PatchPackageCodec.decode(normPkg, password: nil),
+               let rule = decoded.project.rules.first {
+                return rule.replacementData
+            }
+            return defaultData
+        }()
+
+        let spec = buildTransformSpec(for: remote.id, defaults: defaults)
+        return patchUnityFSAssetIndexer(baseUnityData, isMax: isMax, spec: spec) ?? defaultData
+    }
+
+    private static func buildTransformSpec(for id: String, defaults: UserDefaults) -> BoneTransformSpec {
+        let fov = defaults.object(forKey: "danger.aim.fov") as? Double ?? 120.0
+        let rageFovPct = defaults.object(forKey: "danger.aim.rageFovPct") as? Double ?? 100.0
+        let headRate = defaults.object(forKey: "danger.aim.headRate") as? Double ?? 8.0
+        let chestRate = defaults.object(forKey: "danger.aim.chestRate") as? Double ?? 2.0
+        let rageDistance = defaults.object(forKey: "danger.aim.rageDistance") as? Double ?? 250.0
+        let rageSmooth = defaults.object(forKey: "danger.aim.rageSmooth") as? Double ?? 10.0
+        let visibleStrength = defaults.object(forKey: "danger.aim.visibleStrength") as? Double ?? 1.0
+        let silent360 = defaults.object(forKey: "danger.aim.silent360") as? Bool ?? true
+        let antennaEnabled = defaults.object(forKey: "danger.aim.antennaEnabled") as? Bool ?? true
+
+        // Slider multipliers
+        let fovScale = Float(0.82 + (min(max(fov, 0.0), 400.0) / 400.0) * 0.58)
+        let rageScale = Float(0.75 + (min(max(rageFovPct, 0.0), 200.0) / 200.0) * 0.55)
+        let distFactor = Float(0.92 + (min(max(rageDistance, 10.0), 1000.0) / 1000.0) * 0.18 * min(max(visibleStrength, 0.1), 1.0))
+        let smoothNorm = Float(min(max(rageSmooth, 0.0), 50.0) / 50.0)
+        let totalRate = max(1.0, headRate + chestRate)
+        let chestBlend = Float(min(max(chestRate / totalRate, 0.0), 1.0))
+        let antennaFloat: Float = antennaEnabled ? 500.0 : 1.0
+
+        switch id {
+        case "walter-cuello-antena-max", "walter-cuello-antena-normal":
+            return BoneTransformSpec(
+                maleFloats: [-0.305083, -0.003954, -0.000002, 0.0, 2.686321, -0.000008, -0.000013, 1.555556, 1.555556, 1.555556],
+                femaleFloats: [-0.305083, -0.003954, -0.000002, 0.0, 2.686321, -0.000008, -0.000013, 1.5, 1.5, 1.5],
+                useSpineTag: false,
+                antennaScale: 500.0
+            )
+        case "walter-balas-magicas-antena-max", "walter-balas-magicas-antena-normal":
+            return BoneTransformSpec(
+                maleFloats: [0.953331, -0.003515, -0.000763, 0.00634, 0.041256, -0.037035, 0.998442, 10.0, 10.0, 10.0],
+                femaleFloats: [0.953322, -0.003515, -0.000763, 0.00634, 0.041256, -0.037035, 0.998442, 10.0, 10.0, 10.0],
+                useSpineTag: true,
+                antennaScale: 500.0
+            )
+        case "walter-drag-antena-max", "walter-drag-antena-normal":
+            return BoneTransformSpec(
+                maleFloats: [-0.305083, -0.074639, -0.000002, 0.0, 2.686321, -0.000008, -0.000013, 1.555556, 1.555556, 1.555556],
+                femaleFloats: [-0.305083, -0.074639, -0.000001, 0.0, 2.686321, -0.000008, -0.000013, 1.5, 1.5, 1.5],
+                useSpineTag: false,
+                antennaScale: 500.0
+            )
+        case "walter-pecho-antena-max", "walter-pecho-antena-normal":
+            return BoneTransformSpec(
+                maleFloats: [-0.013340, -0.003515, -0.000763, 0.00634, 3.041255, 0.037035, 0.998442, 1.555556, 1.555556, 1.555556],
+                femaleFloats: [-0.013340, -0.003515, -0.000763, 0.00634, 3.041255, 0.037035, 0.998442, 1.5, 1.6, 1.5],
+                useSpineTag: false,
+                antennaScale: 500.0
+            )
+        case "danger-silent-aim-normal", "danger-silent-aim-max":
+            let baseSilentScale: Float = silent360 ? 10.0 : 6.8
+            let tunedScale = min(max(baseSilentScale * fovScale * rageScale * distFactor, 4.5), 13.5)
+            let px: Float = 0.953331 * distFactor
+            return BoneTransformSpec(
+                maleFloats: [px, -0.003515, -0.000763, 0.00634, 0.041256, -0.037035, 0.998442, tunedScale, tunedScale, tunedScale],
+                femaleFloats: [px, -0.003515, -0.000763, 0.00634, 0.041256, -0.037035, 0.998442, tunedScale, tunedScale, tunedScale],
+                useSpineTag: true,
+                antennaScale: antennaFloat
+            )
+        case "danger-aimbot-lite-normal", "danger-aimbot-lite-max":
+            let mScale = min(max(1.555556 * fovScale, 1.25), 2.15)
+            let fScale = min(max(1.500000 * fovScale, 1.20), 2.10)
+            let py = -0.010202 - (smoothNorm * 0.028)
+            return BoneTransformSpec(
+                maleFloats: [-0.143705, py, -0.0, 0.0, 0.0, -0.14392, 0.989589, mScale, mScale, mScale],
+                femaleFloats: [-0.143705, py, -0.0, 0.0, 0.0, -0.14392, 0.989589, fScale, fScale, fScale],
+                useSpineTag: false,
+                antennaScale: antennaEnabled ? antennaFloat : 1.0
+            )
+        case "danger-aimbot-rage-normal", "danger-aimbot-rage-max":
+            let px = (-0.305083 * (1.0 - chestBlend * 0.45))
+            let py = -0.003954 - (smoothNorm * 0.045)
+            let ry = 2.686321 + (chestBlend * 0.354934)
+            let mScale = min(max(1.95 * fovScale * rageScale * distFactor, 1.55), 3.40)
+            let fScale = min(max(1.90 * fovScale * rageScale * distFactor, 1.50), 3.30)
+            return BoneTransformSpec(
+                maleFloats: [px, py, -0.000002, 0.0, ry, -0.000008, -0.000013, mScale, mScale, mScale],
+                femaleFloats: [px, py, -0.000002, 0.0, ry, -0.000008, -0.000013, fScale, fScale, fScale],
+                useSpineTag: false,
+                antennaScale: antennaFloat
+            )
+        case "danger-autofire-v2-normal", "danger-autofire-v2-max":
+            let px = -0.268000 * (1.0 - chestBlend * 0.35)
+            let py = -0.042000 - (smoothNorm * 0.032)
+            let mScale = min(max(1.78 * fovScale * distFactor, 1.45), 2.75)
+            let fScale = min(max(1.72 * fovScale * distFactor, 1.40), 2.65)
+            return BoneTransformSpec(
+                maleFloats: [px, py, -0.000002, 0.0, 2.686321, -0.000008, -0.000013, mScale, mScale, mScale],
+                femaleFloats: [px, py, -0.000001, 0.0, 2.686321, -0.000008, -0.000013, fScale, fScale, fScale],
+                useSpineTag: false,
+                antennaScale: antennaFloat
+            )
+        case "danger-full-headshot-normal", "danger-full-headshot-max":
+            let py = -0.074639 - (smoothNorm * 0.020)
+            let mScale = min(max(1.68 * fovScale * rageScale, 1.45), 2.60)
+            let fScale = min(max(1.62 * fovScale * rageScale, 1.40), 2.50)
+            return BoneTransformSpec(
+                maleFloats: [-0.305083, py, -0.000002, 0.0, 2.686321, -0.000008, -0.000013, mScale, mScale, mScale],
+                femaleFloats: [-0.305083, py, -0.000001, 0.0, 2.686321, -0.000008, -0.000013, fScale, fScale, fScale],
+                useSpineTag: false,
+                antennaScale: antennaFloat
+            )
+        case "danger-kill-in-chest-normal", "danger-kill-in-chest-max":
+            let headBias = Float(1.0 - chestBlend) * 0.12
+            let px = -0.013340 - headBias
+            let mScale = min(max(1.58 * fovScale, 1.35), 2.35)
+            let fScaleY = min(max(1.65 * fovScale, 1.40), 2.45)
+            return BoneTransformSpec(
+                maleFloats: [px, -0.003515, -0.000763, 0.00634, 3.041255, 0.037035, 0.998442, mScale, mScale, mScale],
+                femaleFloats: [px, -0.003515, -0.000763, 0.00634, 3.041255, 0.037035, 0.998442, mScale, fScaleY, mScale],
+                useSpineTag: false,
+                antennaScale: antennaFloat
+            )
+        default:
+            let px = -0.305083 * (1.0 - chestBlend) + (-0.013340 * chestBlend)
+            let py = -0.003954 - (smoothNorm * 0.070)
+            let ry = 2.686321 * (1.0 - chestBlend) + (3.041255 * chestBlend)
+            let mScale = min(max(1.555556 * fovScale * rageScale, 1.25), 2.90)
+            return BoneTransformSpec(
+                maleFloats: [px, py, -0.000002, 0.0, ry, -0.000008, -0.000013, mScale, mScale, mScale],
+                femaleFloats: [px, py, -0.000002, 0.0, ry, -0.000008, -0.000013, mScale, mScale, mScale],
+                useSpineTag: false,
+                antennaScale: antennaFloat
+            )
+        }
+    }
+
+    private static func patchUnityFSAssetIndexer(_ data: Data, isMax: Bool, spec: BoneTransformSpec) -> Data? {
+        guard data.count >= 128 else { return nil }
+        let bytes = [UInt8](data)
+        let unitySize = Int(readBEUInt64(bytes, offset: 30))
+        let cIB = Int(readBEUInt32(bytes, offset: 38))
+        let uIB = Int(readBEUInt32(bytes, offset: 42))
+        guard unitySize > 64 + cIB, unitySize <= bytes.count, uIB >= 30 else { return nil }
+
+        let ibCompressed = Array(bytes[(unitySize - cIB)..<unitySize])
+        guard var ib = lz4Decompress(ibCompressed, uncompressedSize: uIB), ib.count == uIB else { return nil }
+        let blockCount = Int(readBEUInt32(ib, offset: 16))
+        guard blockCount == 1 else { return nil }
+        let uSz = Int(readBEUInt32(ib, offset: 20))
+        let cSz = Int(readBEUInt32(ib, offset: 24))
+        let bFlags = readBEUInt16(ib, offset: 28)
+        guard (bFlags & 0x3F) == 2 || (bFlags & 0x3F) == 3, 64 + cSz <= unitySize - cIB else { return nil }
+
+        let blockCompressed = Array(bytes[64..<(64 + cSz)])
+        guard var uBlock = lz4Decompress(blockCompressed, uncompressedSize: uSz), uBlock.count == uSz else { return nil }
+
+        // Patch Antenna floats (Male at 0x68ec, Female at 0x9d08 in Normal or 0x9f20 in Max)
+        let ant2Offset = isMax ? 0x9f20 : 0x9d08
+        if 0x68ec + 4 <= uBlock.count {
+            writeLEFloat(&uBlock, offset: 0x68ec, value: spec.antennaScale)
+        }
+        if ant2Offset + 4 <= uBlock.count {
+            writeLEFloat(&uBlock, offset: ant2Offset, value: spec.antennaScale)
+        }
+
+        // Locate both bone_LeftToe occurrences and patch their 10-float transforms + 16-byte aligned bone tag
+        let marker = Array("bone_LeftToe".utf8)
+        var searchStart = 0
+        var occurrence = 0
+        let spineTag: [UInt8] = [10, 0, 0, 0] + Array("bone_Spine".utf8) + [0, 0]
+        let headTag: [UInt8] = [9, 0, 0, 0] + Array("bone_Head".utf8) + [0, 0, 0]
+        let targetTag = spec.useSpineTag ? spineTag : headTag
+
+        while let pos = findSubsequence(in: uBlock, needle: marker, from: searchStart) {
+            let transformOffset = pos + 20
+            let tagOffset = pos + 60
+            if tagOffset + 16 <= uBlock.count {
+                let floats = (occurrence == 0) ? spec.maleFloats : spec.femaleFloats
+                for (i, val) in floats.prefix(10).enumerated() {
+                    writeLEFloat(&uBlock, offset: transformOffset + (i * 4), value: val)
+                }
+                for i in 0..<16 {
+                    uBlock[tagOffset + i] = targetTag[i]
+                }
+                occurrence += 1
+            }
+            searchStart = pos + marker.count
+        }
+        guard occurrence >= 2 else { return nil }
+
+        let newBlockCompressed = lz4CompressRaw(uBlock)
+        writeBEUInt32(&ib, offset: 24, value: UInt32(newBlockCompressed.count))
+        writeBEUInt16(&ib, offset: 28, value: 3)
+        let newIBCompressed = lz4CompressRaw(ib)
+
+        let newUnitySize = 64 + newBlockCompressed.count + newIBCompressed.count
+        guard newUnitySize <= bytes.count else { return nil }
+
+        var out = Array(bytes[0..<64])
+        writeBEUInt64(&out, offset: 30, value: UInt64(newUnitySize))
+        writeBEUInt32(&out, offset: 38, value: UInt32(newIBCompressed.count))
+        writeBEUInt32(&out, offset: 42, value: UInt32(ib.count))
+        out.append(contentsOf: newBlockCompressed)
+        out.append(contentsOf: newIBCompressed)
+        if newUnitySize < bytes.count {
+            out.append(contentsOf: bytes[newUnitySize..<bytes.count])
+        }
+        return Data(out)
+    }
+
+    private static func findSubsequence(in haystack: [UInt8], needle: [UInt8], from start: Int) -> Int? {
+        guard !needle.isEmpty, haystack.count >= start + needle.count else { return nil }
+        let limit = haystack.count - needle.count
+        let first = needle[0]
+        var idx = start
+        while idx <= limit {
+            if haystack[idx] == first {
+                var matched = true
+                for j in 1..<needle.count where haystack[idx + j] != needle[j] {
+                    matched = false
+                    break
+                }
+                if matched { return idx }
+            }
+            idx += 1
+        }
+        return nil
+    }
+
+    private static func lz4Decompress(_ src: [UInt8], uncompressedSize: Int) -> [UInt8]? {
+        var out: [UInt8] = []
+        out.reserveCapacity(uncompressedSize)
+        var pos = 0
+        let n = src.count
+        while pos < n && out.count < uncompressedSize {
+            let token = Int(src[pos])
+            pos += 1
+            var litLen = token >> 4
+            if litLen == 15 {
+                while pos < n {
+                    let b = Int(src[pos])
+                    pos += 1
+                    litLen += b
+                    if b != 255 { break }
+                }
+            }
+            guard pos + litLen <= n else { return nil }
+            out.append(contentsOf: src[pos..<(pos + litLen)])
+            pos += litLen
+            if pos >= n || out.count >= uncompressedSize { break }
+            guard pos + 2 <= n else { return nil }
+            let offset = Int(src[pos]) | (Int(src[pos + 1]) << 8)
+            pos += 2
+            guard offset > 0, offset <= out.count else { return nil }
+            var matchLen = (token & 0x0F) + 4
+            if (token & 0x0F) == 15 {
+                while pos < n {
+                    let b = Int(src[pos])
+                    pos += 1
+                    matchLen += b
+                    if b != 255 { break }
+                }
+            }
+            let start = out.count - offset
+            for i in 0..<matchLen {
+                out.append(out[start + i])
+            }
+        }
+        return out.count == uncompressedSize ? out : nil
+    }
+
+    private static func lz4CompressRaw(_ src: [UInt8]) -> [UInt8] {
+        let n = src.count
+        if n == 0 { return [] }
+        var out: [UInt8] = []
+        out.reserveCapacity(n)
+        var hashTable = [Int](repeating: -1, count: 65536)
+        var anchor = 0
+        var pos = 0
+        let limit = n - 12
+
+        while pos < limit {
+            let v = UInt32(src[pos])
+                | (UInt32(src[pos + 1]) << 8)
+                | (UInt32(src[pos + 2]) << 16)
+                | (UInt32(src[pos + 3]) << 24)
+            let h = Int((v &* 2654435761) >> 16)
+            let ref = hashTable[h]
+            hashTable[h] = pos
+
+            if ref >= 0,
+               (pos - ref) <= 0xFFFF,
+               src[ref] == src[pos],
+               src[ref + 1] == src[pos + 1],
+               src[ref + 2] == src[pos + 2],
+               src[ref + 3] == src[pos + 3] {
+                let litLen = pos - anchor
+                let offset = pos - ref
+                var matchLen = 4
+                let maxMatch = n - 5 - pos
+                while matchLen < maxMatch && src[ref + matchLen] == src[pos + matchLen] {
+                    matchLen += 1
+                }
+                let mlToken = matchLen - 4
+                out.append(UInt8((min(litLen, 15) << 4) | min(mlToken, 15)))
+                if litLen >= 15 {
+                    var rem = litLen - 15
+                    while rem >= 255 {
+                        out.append(255)
+                        rem -= 255
+                    }
+                    out.append(UInt8(rem))
+                }
+                out.append(contentsOf: src[anchor..<pos])
+                out.append(UInt8(offset & 0xFF))
+                out.append(UInt8((offset >> 8) & 0xFF))
+                if mlToken >= 15 {
+                    var rem = mlToken - 15
+                    while rem >= 255 {
+                        out.append(255)
+                        rem -= 255
+                    }
+                    out.append(UInt8(rem))
+                }
+                pos += matchLen
+                anchor = pos
+            } else {
+                pos += 1
+            }
+        }
+
+        let litLen = n - anchor
+        out.append(UInt8(min(litLen, 15) << 4))
+        if litLen >= 15 {
+            var rem = litLen - 15
+            while rem >= 255 {
+                out.append(255)
+                rem -= 255
+            }
+            out.append(UInt8(rem))
+        }
+        out.append(contentsOf: src[anchor..<n])
+        return out
+    }
+
+    private static func readBEUInt16(_ buf: [UInt8], offset: Int) -> UInt16 {
+        (UInt16(buf[offset]) << 8) | UInt16(buf[offset + 1])
+    }
+
+    private static func readBEUInt32(_ buf: [UInt8], offset: Int) -> UInt32 {
+        (UInt32(buf[offset]) << 24)
+            | (UInt32(buf[offset + 1]) << 16)
+            | (UInt32(buf[offset + 2]) << 8)
+            | UInt32(buf[offset + 3])
+    }
+
+    private static func readBEUInt64(_ buf: [UInt8], offset: Int) -> UInt64 {
+        (UInt64(readBEUInt32(buf, offset: offset)) << 32)
+            | UInt64(readBEUInt32(buf, offset: offset + 4))
+    }
+
+    private static func writeBEUInt16(_ buf: inout [UInt8], offset: Int, value: UInt16) {
+        buf[offset] = UInt8((value >> 8) & 0xFF)
+        buf[offset + 1] = UInt8(value & 0xFF)
+    }
+
+    private static func writeBEUInt32(_ buf: inout [UInt8], offset: Int, value: UInt32) {
+        buf[offset] = UInt8((value >> 24) & 0xFF)
+        buf[offset + 1] = UInt8((value >> 16) & 0xFF)
+        buf[offset + 2] = UInt8((value >> 8) & 0xFF)
+        buf[offset + 3] = UInt8(value & 0xFF)
+    }
+
+    private static func writeBEUInt64(_ buf: inout [UInt8], offset: Int, value: UInt64) {
+        writeBEUInt32(&buf, offset: offset, value: UInt32((value >> 32) & 0xFFFFFFFF))
+        writeBEUInt32(&buf, offset: offset + 4, value: UInt32(value & 0xFFFFFFFF))
+    }
+
+    private static func writeLEFloat(_ buf: inout [UInt8], offset: Int, value: Float) {
+        let bits = value.bitPattern
+        buf[offset] = UInt8(bits & 0xFF)
+        buf[offset + 1] = UInt8((bits >> 8) & 0xFF)
+        buf[offset + 2] = UInt8((bits >> 16) & 0xFF)
+        buf[offset + 3] = UInt8((bits >> 24) & 0xFF)
     }
 }

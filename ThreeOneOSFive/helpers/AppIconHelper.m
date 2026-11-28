@@ -234,6 +234,7 @@ NSDictionary<NSString *, NSDictionary *> *installedAppInfo(void) {
 
 // Icon via LSApplicationProxy (per bundle ID)
 UIImage *iconForBundleID(NSString *bundleID) {
+    ensureLaunchServicesLoaded();
     static NSCache<NSString *, UIImage *> *cache;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -254,10 +255,46 @@ UIImage *iconForBundleID(NSString *bundleID) {
     return icon;
 }
 
-// Name + icon for a single bundle ID via LSApplicationProxy
+// Name + icon for a single bundle ID via LSApplicationProxy / LSApplicationRecord
 NSDictionary *appInfoForBundleID(NSString *bundleID) {
+    ensureLaunchServicesLoaded();
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     result[@"name"] = bundleID;
+
+    Class recordClass = NSClassFromString(@"LSApplicationRecord");
+    SEL recordAllocSel = NSSelectorFromString(@"alloc");
+    SEL recordInitSel = NSSelectorFromString(@"initWithBundleIdentifier:allowPlaceholder:error:");
+    if (recordClass && [recordClass respondsToSelector:recordAllocSel]) {
+        id allocated = ((id (*)(id, SEL))objc_msgSend)(recordClass, recordAllocSel);
+        if (allocated && [allocated respondsToSelector:recordInitSel]) {
+            NSError *recordErr = nil;
+            id record = ((id (*)(id, SEL, id, BOOL, NSError **))objc_msgSend)(
+                allocated, recordInitSel, bundleID, NO, &recordErr
+            );
+            if (record) {
+                result[@"found"] = @YES;
+                for (NSString *selName in @[@"dataContainerURL", @"containerURL"]) {
+                    SEL cSel = NSSelectorFromString(selName);
+                    if (![record respondsToSelector:cSel]) continue;
+                    id cVal = ((id (*)(id, SEL))objc_msgSend)(record, cSel);
+                    NSString *cPath = [cVal isKindOfClass:[NSURL class]] ? [cVal path] : cVal;
+                    if ([cPath isKindOfClass:[NSString class]] && cPath.length > 0) {
+                        result[@"container"] = cPath;
+                        break;
+                    }
+                }
+                for (NSString *selName in @[@"localizedName", @"localizedShortName"]) {
+                    SEL nSel = NSSelectorFromString(selName);
+                    if (![record respondsToSelector:nSel]) continue;
+                    id nVal = ((id (*)(id, SEL))objc_msgSend)(record, nSel);
+                    if ([nVal isKindOfClass:[NSString class]] && [nVal length] > 0) {
+                        result[@"name"] = nVal;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     Class proxyClass = NSClassFromString(@"LSApplicationProxy");
     if (!proxyClass) return result;
@@ -323,14 +360,16 @@ NSDictionary *appInfoForBundleID(NSString *bundleID) {
         }
     }
 
-    for (NSString *selectorName in @[@"dataContainerURL", @"containerURL"]) {
-        SEL containerSel = NSSelectorFromString(selectorName);
-        if (![proxy respondsToSelector:containerSel]) continue;
-        id value = ((id (*)(id, SEL))objc_msgSend)(proxy, containerSel);
-        NSString *path = [value isKindOfClass:[NSURL class]] ? [value path] : value;
-        if ([path isKindOfClass:[NSString class]] && path.length > 0) {
-            result[@"container"] = path;
-            break;
+    if (!result[@"container"]) {
+        for (NSString *selectorName in @[@"dataContainerURL", @"containerURL"]) {
+            SEL containerSel = NSSelectorFromString(selectorName);
+            if (![proxy respondsToSelector:containerSel]) continue;
+            id value = ((id (*)(id, SEL))objc_msgSend)(proxy, containerSel);
+            NSString *path = [value isKindOfClass:[NSURL class]] ? [value path] : value;
+            if ([path isKindOfClass:[NSString class]] && path.length > 0) {
+                result[@"container"] = path;
+                break;
+            }
         }
     }
 
@@ -338,6 +377,7 @@ NSDictionary *appInfoForBundleID(NSString *bundleID) {
 }
 
 BOOL openApplicationForBundleID(NSString *bundleID) {
+    ensureLaunchServicesLoaded();
     if (bundleID.length == 0) return NO;
     Class workspaceClass = NSClassFromString(@"LSApplicationWorkspace");
     SEL defaultWorkspaceSelector = NSSelectorFromString(@"defaultWorkspace");

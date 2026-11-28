@@ -245,15 +245,24 @@ class AppState: ObservableObject {
     private func refreshKernelExploitStatus() {
         guard !kernelExploitRunning else { return }
 
-        // iOS < 26: kernel R/W success persists (no sandbox probe)
-        // iOS >= 26: verify full sandbox escape is still active
         if KernelExploit.requiresSandboxEscape {
             if KernelExploit.hasSandboxAccess() {
                 if !exploitStatus.isSuccess {
                     exploitStatus = .success(method: "kexploit")
                     log("app: existing sandbox access is still active; skipping kernel exploit")
                 }
-            } else if exploitStatus.isSuccess {
+                return
+            }
+            let bqProbe = ContainerStore.grantContainerAccess(ContainerStore.appDataRoot)
+            if bqProbe >= 0 {
+                bad_query_release(bqProbe)
+                if !exploitStatus.isSuccess {
+                    exploitStatus = .success(method: "MCM / bad_query")
+                    log("app: MCM / bad_query container access verified")
+                }
+                return
+            }
+            if exploitStatus.isSuccess {
                 exploitStatus = .notStarted
                 log("app: sandbox access is no longer active")
             }
@@ -269,7 +278,18 @@ class AppState: ObservableObject {
         exploitStatus = .notStarted
         log("app: running kernel exploit on background...")
         DispatchQueue.global(qos: .userInitiated).async {
+            let bqProbe = ContainerStore.grantContainerAccess(ContainerStore.appDataRoot)
+            if bqProbe >= 0 {
+                bad_query_release(bqProbe)
+                DispatchQueue.main.async {
+                    self.kernelExploitRunning = false
+                    self.exploitStatus = .success(method: "MCM / bad_query")
+                    log("app: container access active via MCM / bad_query")
+                }
+                return
+            }
             let ok = KernelExploit.run()
+            let fallbackMCM = MCMBridgeAvailable()
             DispatchQueue.main.async {
                 self.kernelExploitRunning = false
                 if ok {
@@ -279,6 +299,9 @@ class AppState: ObservableObject {
                     } else {
                         log("app: kernel exploit success — kernel access active")
                     }
+                } else if fallbackMCM {
+                    self.exploitStatus = .success(method: "MCMBridge")
+                    log("app: using MCMBridge container activation")
                 } else {
                     self.exploitStatus = .failed(method: "kexploit", code: -1)
                     log("app: kernel exploit failed — relaunch the app before retrying")

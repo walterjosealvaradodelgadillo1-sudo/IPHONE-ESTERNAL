@@ -161,11 +161,19 @@ enum PatchTransaction {
             .appendingPathComponent(project.id.uuidString, isDirectory: true)
             .appendingPathComponent(transactionID.uuidString, isDirectory: true)
         do {
-            try fileManager.createDirectory(
-                at: transactionDirectory,
-                withIntermediateDirectories: true,
-                attributes: [.protectionKey: FileProtectionType.complete]
-            )
+            do {
+                try fileManager.createDirectory(
+                    at: transactionDirectory,
+                    withIntermediateDirectories: true,
+                    attributes: [.protectionKey: FileProtectionType.complete]
+                )
+            } catch {
+                try fileManager.createDirectory(
+                    at: transactionDirectory,
+                    withIntermediateDirectories: true,
+                    attributes: nil
+                )
+            }
         } catch {
             throw PatchPackageError.applyFailed
         }
@@ -196,8 +204,8 @@ enum PatchTransaction {
                 if let backupFilename {
                     let backupURL = transactionDirectory.appendingPathComponent(backupFilename)
                     let sourceForBackup = vaultEntry.originalFileURL ?? resolved.target
-                    try fileManager.copyItem(at: sourceForBackup, to: backupURL)
-                    try fileManager.setAttributes(
+                    try copyFileBytes(from: sourceForBackup, to: backupURL, fileManager: fileManager)
+                    try? fileManager.setAttributes(
                         [.protectionKey: FileProtectionType.complete],
                         ofItemAtPath: backupURL.path
                     )
@@ -238,13 +246,20 @@ enum PatchTransaction {
 
         do {
             for resolved in resolvedDirectories where !fileManager.fileExists(atPath: resolved.target.path) {
+                _ = ContainerStore.grantContainerAccess(resolved.target.deletingLastPathComponent().path)
+                _ = ContainerStore.grantContainerAccess(resolved.target.path)
                 try fileManager.createDirectory(
                     at: resolved.target,
-                    withIntermediateDirectories: false
+                    withIntermediateDirectories: true
                 )
             }
             for (index, resolved) in resolvedRules.enumerated() {
                 try beforeWrite?(index)
+                let parentDir = resolved.target.deletingLastPathComponent()
+                if !fileManager.fileExists(atPath: parentDir.path) {
+                    _ = ContainerStore.grantContainerAccess(parentDir.path)
+                    try? fileManager.createDirectory(at: parentDir, withIntermediateDirectories: true)
+                }
                 try atomicWrite(
                     resolved.rule.replacementData,
                     to: resolved.target,
@@ -673,9 +688,8 @@ enum PatchTransaction {
                 relativePath: directory.relativePath,
                 containerRoot: root
             )
-            guard fileManager.fileExists(atPath: target.path) else { continue }
-            let values = try target.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
-            guard values.isSymbolicLink != true, values.isDirectory == true else {
+            let info = statPathInfo(target, fileManager: fileManager)
+            guard info.exists, !info.isSymbolicLink, info.isDirectory else {
                 continue
             }
             let contents = (try? fileManager.contentsOfDirectory(atPath: target.path)) ?? []
@@ -683,6 +697,27 @@ enum PatchTransaction {
                 try? fileManager.removeItem(at: target)
             }
         }
+    }
+
+    private static func statPathInfo(
+        _ url: URL,
+        fileManager: FileManager
+    ) -> (exists: Bool, isDirectory: Bool, isSymbolicLink: Bool) {
+        var st = stat()
+        if lstat(url.path, &st) == 0 {
+            let mode = st.st_mode & S_IFMT
+            return (
+                exists: true,
+                isDirectory: mode == S_IFDIR,
+                isSymbolicLink: mode == S_IFLNK
+            )
+        }
+        var isDir: ObjCBool = false
+        if fileManager.fileExists(atPath: url.path, isDirectory: &isDir) {
+            let isLink = (try? fileManager.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType) == .typeSymbolicLink
+            return (exists: true, isDirectory: isDir.boolValue && !isLink, isSymbolicLink: isLink)
+        }
+        return (exists: false, isDirectory: false, isSymbolicLink: false)
     }
 
     private static func validateFileTarget(
@@ -698,24 +733,24 @@ enum PatchTransaction {
         var cursor = PatchPathValidator.canonicalFileURL(containerRoot)
         for component in components.dropLast() {
             cursor.appendPathComponent(component, isDirectory: true)
-            guard fileManager.fileExists(atPath: cursor.path) else {
+            let info = statPathInfo(cursor, fileManager: fileManager)
+            guard info.exists else {
                 if allowMissingParents { break }
                 throw PatchPackageError.applyFailed
             }
-            let values = try cursor.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
-            guard values.isSymbolicLink != true else {
+            guard !info.isSymbolicLink else {
                 throw PatchPackageError.symbolicLinkUnsupported
             }
-            guard values.isDirectory == true else {
+            guard info.isDirectory else {
                 throw PatchPackageError.applyFailed
             }
         }
-        if fileManager.fileExists(atPath: target.path) {
-            let values = try target.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
-            guard values.isSymbolicLink != true else {
+        let targetInfo = statPathInfo(target, fileManager: fileManager)
+        if targetInfo.exists {
+            guard !targetInfo.isSymbolicLink else {
                 throw PatchPackageError.symbolicLinkUnsupported
             }
-            guard values.isDirectory != true else {
+            guard !targetInfo.isDirectory else {
                 throw PatchPackageError.applyFailed
             }
         }
@@ -732,18 +767,18 @@ enum PatchTransaction {
         var cursor = PatchPathValidator.canonicalFileURL(containerRoot)
         for component in components {
             cursor.appendPathComponent(component, isDirectory: true)
-            guard fileManager.fileExists(atPath: cursor.path) else { break }
-            let values = try cursor.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
-            guard values.isSymbolicLink != true else {
+            let info = statPathInfo(cursor, fileManager: fileManager)
+            guard info.exists else { break }
+            guard !info.isSymbolicLink else {
                 throw PatchPackageError.symbolicLinkUnsupported
             }
-            guard values.isDirectory == true else {
+            guard info.isDirectory else {
                 throw PatchPackageError.applyFailed
             }
         }
-        if fileManager.fileExists(atPath: target.path) {
-            let values = try target.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
-            guard values.isSymbolicLink != true, values.isDirectory == true else {
+        let targetInfo = statPathInfo(target, fileManager: fileManager)
+        if targetInfo.exists {
+            guard !targetInfo.isSymbolicLink, targetInfo.isDirectory else {
                 throw PatchPackageError.applyFailed
             }
         }
@@ -755,29 +790,131 @@ enum PatchTransaction {
         return leftDepth == rightDepth ? lhs < rhs : leftDepth < rightDepth
     }
 
+    private static func readRawFileBytes(_ url: URL) throws -> Data {
+        _ = ContainerStore.grantContainerAccess(url.deletingLastPathComponent().path)
+        _ = ContainerStore.grantContainerAccess(url.path)
+        if let data = try? Data(contentsOf: url) {
+            return data
+        }
+        let fd = open(url.path, O_RDONLY | O_CLOEXEC)
+        guard fd >= 0 else {
+            throw PatchPackageError.applyFailed
+        }
+        defer { close(fd) }
+        var result = Data()
+        var buffer = [UInt8](repeating: 0, count: 65_536)
+        while true {
+            let n = buffer.withUnsafeMutableBytes { rawBuf -> Int in
+                guard let base = rawBuf.baseAddress else { return -1 }
+                return Darwin.read(fd, base, rawBuf.count)
+            }
+            if n > 0 {
+                result.append(buffer, count: n)
+            } else if n == 0 {
+                break
+            } else {
+                if errno == EINTR { continue }
+                throw PatchPackageError.applyFailed
+            }
+        }
+        return result
+    }
+
+    private static func writeBytesInPlace(_ data: Data, to target: URL) -> Bool {
+        let parentPath = target.deletingLastPathComponent().path
+        _ = ContainerStore.grantContainerAccess(parentPath)
+        _ = ContainerStore.grantContainerAccess(target.path)
+        var fd = open(target.path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0o644)
+        if fd < 0 {
+            _ = chmod(target.path, 0o666)
+            fd = open(target.path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0o644)
+        }
+        if fd < 0 {
+            _ = unlink(target.path)
+            fd = open(target.path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0o644)
+        }
+        guard fd >= 0 else { return false }
+        let ok = data.withUnsafeBytes { rawBuf -> Bool in
+            guard let base = rawBuf.baseAddress else { return data.isEmpty }
+            var written = 0
+            while written < data.count {
+                let n = Darwin.write(fd, base.advanced(by: written), data.count - written)
+                if n > 0 {
+                    written += n
+                } else if n < 0 && errno == EINTR {
+                    continue
+                } else {
+                    return false
+                }
+            }
+            return true
+        }
+        _ = fsync(fd)
+        close(fd)
+        return ok
+    }
+
+    private static func copyFileBytes(
+        from source: URL,
+        to destination: URL,
+        fileManager: FileManager
+    ) throws {
+        _ = ContainerStore.grantContainerAccess(source.deletingLastPathComponent().path)
+        _ = ContainerStore.grantContainerAccess(source.path)
+        let data = try readRawFileBytes(source)
+        if fileManager.fileExists(atPath: destination.path) {
+            try? fileManager.removeItem(at: destination)
+        }
+        do {
+            try data.write(to: destination, options: .atomic)
+        } catch {
+            guard writeBytesInPlace(data, to: destination) else {
+                throw PatchPackageError.applyFailed
+            }
+        }
+    }
+
     private static func atomicWrite(
         _ data: Data,
         to target: URL,
         preservingExistingAttributes: Bool,
         fileManager: FileManager
     ) throws {
-        let staging = target.deletingLastPathComponent()
-            .appendingPathComponent(".3105-patch-\(UUID().uuidString)")
+        let parentDir = target.deletingLastPathComponent()
+        _ = ContainerStore.grantContainerAccess(parentDir.path)
+        _ = ContainerStore.grantContainerAccess(target.path)
+        let staging = parentDir.appendingPathComponent(".3105-patch-\(UUID().uuidString)")
         var attributes: [FileAttributeKey: Any] = [:]
         if preservingExistingAttributes,
            let current = try? fileManager.attributesOfItem(atPath: target.path) {
             if let permissions = current[.posixPermissions] { attributes[.posixPermissions] = permissions }
             if let protection = current[.protectionKey] { attributes[.protectionKey] = protection }
         }
-        guard fileManager.createFile(atPath: staging.path, contents: data, attributes: attributes) else {
-            throw PatchPackageError.applyFailed
-        }
         defer { try? fileManager.removeItem(at: staging) }
-        let handle = try FileHandle(forWritingTo: staging)
-        try handle.synchronize()
-        try handle.close()
-        guard rename(staging.path, target.path) == 0 else {
-            throw PatchPackageError.applyFailed
+        var stagedReplaced = false
+        if fileManager.createFile(atPath: staging.path, contents: data, attributes: nil) {
+            if let handle = try? FileHandle(forWritingTo: staging) {
+                try? handle.synchronize()
+                try? handle.close()
+            }
+            if rename(staging.path, target.path) == 0 {
+                stagedReplaced = true
+            } else {
+                if fileManager.fileExists(atPath: target.path) {
+                    _ = unlink(target.path)
+                }
+                if rename(staging.path, target.path) == 0 {
+                    stagedReplaced = true
+                }
+            }
+        }
+        if !stagedReplaced {
+            guard writeBytesInPlace(data, to: target) else {
+                throw PatchPackageError.applyFailed
+            }
+        }
+        if !attributes.isEmpty {
+            try? fileManager.setAttributes(attributes, ofItemAtPath: target.path)
         }
     }
 
@@ -788,9 +925,9 @@ enum PatchTransaction {
         fallbackProtection: String? = nil,
         fileManager: FileManager
     ) throws {
-        let staging = target.deletingLastPathComponent()
-            .appendingPathComponent(".3105-restore-\(UUID().uuidString)")
-        defer { try? fileManager.removeItem(at: staging) }
+        let parentDir = target.deletingLastPathComponent()
+        _ = ContainerStore.grantContainerAccess(parentDir.path)
+        _ = ContainerStore.grantContainerAccess(target.path)
         var preservedAttributes: [FileAttributeKey: Any] = [:]
         if let current = try? fileManager.attributesOfItem(atPath: target.path) {
             if let permissions = current[.posixPermissions] {
@@ -807,18 +944,16 @@ enum PatchTransaction {
             let rawProtection = fallbackProtection ?? FileProtectionType.completeUntilFirstUserAuthentication.rawValue
             preservedAttributes[.protectionKey] = FileProtectionType(rawValue: rawProtection)
         }
-        try fileManager.copyItem(at: source, to: staging)
-        try? fileManager.setAttributes(preservedAttributes, ofItemAtPath: staging.path)
-        let handle = try FileHandle(forWritingTo: staging)
-        try handle.synchronize()
-        try handle.close()
-        if rename(staging.path, target.path) != 0 {
-            if fileManager.fileExists(atPath: target.path) {
-                try? fileManager.removeItem(at: target)
-            }
-            guard rename(staging.path, target.path) == 0 else {
-                throw PatchPackageError.restoreFailed
-            }
+        let sourceData = try readRawFileBytes(source)
+        do {
+            try atomicWrite(
+                sourceData,
+                to: target,
+                preservingExistingAttributes: false,
+                fileManager: fileManager
+            )
+        } catch {
+            throw PatchPackageError.restoreFailed
         }
         try? fileManager.setAttributes(preservedAttributes, ofItemAtPath: target.path)
     }
@@ -829,11 +964,19 @@ enum PatchTransaction {
     ) throws -> URL {
         let vaultDir = backupRoot.appendingPathComponent(originalVaultDirectoryName, isDirectory: true)
         if !fileManager.fileExists(atPath: vaultDir.path) {
-            try fileManager.createDirectory(
-                at: vaultDir,
-                withIntermediateDirectories: true,
-                attributes: [.protectionKey: FileProtectionType.complete]
-            )
+            do {
+                try fileManager.createDirectory(
+                    at: vaultDir,
+                    withIntermediateDirectories: true,
+                    attributes: [.protectionKey: FileProtectionType.complete]
+                )
+            } catch {
+                try fileManager.createDirectory(
+                    at: vaultDir,
+                    withIntermediateDirectories: true,
+                    attributes: nil
+                )
+            }
         }
         return vaultDir
     }
@@ -905,16 +1048,7 @@ enum PatchTransaction {
                 // AND the file on disk is a genuine new game file (not any known replacement payload).
                 if activeReceiptsForPath.isEmpty && !diskMatchesKnownReplacement {
                     if targetExists, let diskDigest, diskDigest != meta.originalDigest {
-                        let staging = vaultDir.appendingPathComponent(".vault-\(UUID().uuidString)")
-                        defer { try? fileManager.removeItem(at: staging) }
-                        try fileManager.copyItem(at: targetURL, to: staging)
-                        let handle = try FileHandle(forWritingTo: staging)
-                        try handle.synchronize()
-                        try handle.close()
-                        if fileManager.fileExists(atPath: origURL.path) {
-                            try? fileManager.removeItem(at: origURL)
-                        }
-                        _ = rename(staging.path, origURL.path)
+                        try copyFileBytes(from: targetURL, to: origURL, fileManager: fileManager)
                         try? fileManager.setAttributes(
                             [.protectionKey: FileProtectionType.complete],
                             ofItemAtPath: origURL.path
@@ -980,18 +1114,7 @@ enum PatchTransaction {
         }
 
         if targetExists, let diskDigest {
-            let staging = vaultDir.appendingPathComponent(".vault-\(UUID().uuidString)")
-            defer { try? fileManager.removeItem(at: staging) }
-            try fileManager.copyItem(at: targetURL, to: staging)
-            let handle = try FileHandle(forWritingTo: staging)
-            try handle.synchronize()
-            try handle.close()
-            if fileManager.fileExists(atPath: origURL.path) {
-                try? fileManager.removeItem(at: origURL)
-            }
-            guard rename(staging.path, origURL.path) == 0 else {
-                throw PatchPackageError.applyFailed
-            }
+            try copyFileBytes(from: targetURL, to: origURL, fileManager: fileManager)
             try? fileManager.setAttributes(
                 [.protectionKey: FileProtectionType.complete],
                 ofItemAtPath: origURL.path
@@ -1045,13 +1168,18 @@ enum PatchTransaction {
     }
 
     private static func digestFile(_ url: URL) throws -> Data {
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-        var hasher = SHA256()
-        while let chunk = try handle.read(upToCount: 1_024 * 1_024), !chunk.isEmpty {
-            hasher.update(data: chunk)
+        _ = ContainerStore.grantContainerAccess(url.deletingLastPathComponent().path)
+        _ = ContainerStore.grantContainerAccess(url.path)
+        if let handle = try? FileHandle(forReadingFrom: url) {
+            defer { try? handle.close() }
+            var hasher = SHA256()
+            while let chunk = try handle.read(upToCount: 1_024 * 1_024), !chunk.isEmpty {
+                hasher.update(data: chunk)
+            }
+            return Data(hasher.finalize())
         }
-        return Data(hasher.finalize())
+        let raw = try readRawFileBytes(url)
+        return digest(raw)
     }
 
     private static func containerFingerprint(_ url: URL) -> Data {

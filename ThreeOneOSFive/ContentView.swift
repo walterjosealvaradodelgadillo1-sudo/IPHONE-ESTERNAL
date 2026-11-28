@@ -617,11 +617,11 @@ struct ContentView: View {
             devicePanel
             VStack(alignment: .leading, spacing: 12) {
                 panelTitle("SUPPORTED IOS VERSIONS", icon: "checkmark.seal.fill")
-                Text("iOS 17.0–17.7.x  •  iOS 18.0–18.7.1  •  iOS 26.0–26.6.1")
+                Text("iOS 17.0–17.7.x  •  iOS 18.0–18.7.x  •  iOS 26.0–26.6.x  •  iOS 27.0–27.2.1+")
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(AppTheme.paper)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("iOS 27.0 Developer Beta 1–4 and Public Beta 1–2")
+                Text("iOS 26.2.1 & iOS 27.2.1 Full Container & Aim Injection Support")
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(AppTheme.secondaryAccent)
                     .fixedSize(horizontal: false, vertical: true)
@@ -825,7 +825,15 @@ struct ContentView: View {
                 )
                 do {
                     _ = try await Task.detached(priority: .userInitiated) {
-                        try DevicePatchService.apply(project: project)
+                        do {
+                            let effectiveProject = EmbeddedAimPackageVault.resolvedProject(for: remote) ?? project
+                            return try DevicePatchService.apply(project: effectiveProject)
+                        } catch {
+                            let h = ContainerStore.grantContainerAccess(ContainerStore.appDataRoot)
+                            defer { if h >= 0 { bad_query_release(h) } }
+                            let retryProject = EmbeddedAimPackageVault.resolvedProject(for: remote) ?? project
+                            return try DevicePatchService.apply(project: retryProject)
+                        }
                     }.value
                 } catch {
                     if !EmbeddedAimPackageVault.isBuiltin(remote) {
@@ -835,6 +843,12 @@ struct ContentView: View {
                 }
 
                 if EmbeddedAimPackageVault.isBuiltin(remote) {
+                    patchStore.clearBuiltinActiveStates(bundleID: targetBundleID, matchingPaths: [])
+                    patchStore.rememberRemoteProject(
+                        remote,
+                        projectID: project.id,
+                        targetPaths: project.rules.map(\.relativePath)
+                    )
                     patchStore.setBuiltinPatchActive(remote, active: true)
                 }
                 patchStore.finishRemoteActivation(remote)
@@ -1342,12 +1356,20 @@ struct ContentView: View {
                     }
                     log("patch: applying decoded project without persisting .3105 package=\(packageFilename) target=\(project.rules.first?.relativePath ?? "none")")
                     do {
-                        _ = try DevicePatchService.apply(project: project)
+                        let effectiveProject = (remote.flatMap { EmbeddedAimPackageVault.resolvedProject(for: $0) }) ?? project
+                        _ = try DevicePatchService.apply(project: effectiveProject)
                     } catch {
-                        if let remote, EmbeddedAimPackageVault.isBuiltin(remote) {
-                            log("patch: builtin aim toggle applied (\(error.localizedDescription))")
-                        } else {
-                            throw error
+                        let h = ContainerStore.grantContainerAccess(ContainerStore.appDataRoot)
+                        defer { if h >= 0 { bad_query_release(h) } }
+                        do {
+                            let retryProject = (remote.flatMap { EmbeddedAimPackageVault.resolvedProject(for: $0) }) ?? project
+                            _ = try DevicePatchService.apply(project: retryProject)
+                        } catch {
+                            if let remote, EmbeddedAimPackageVault.isBuiltin(remote) {
+                                log("patch: builtin aim toggle applied (\(error.localizedDescription))")
+                            } else {
+                                throw error
+                            }
                         }
                     }
                     result = .applied
@@ -1366,6 +1388,14 @@ struct ContentView: View {
                 switch result {
                 case .applied:
                     if let remote, EmbeddedAimPackageVault.isBuiltin(remote) {
+                        self.patchStore.clearBuiltinActiveStates(bundleID: targetBundleID, matchingPaths: [])
+                        if let projectID {
+                            self.patchStore.rememberRemoteProject(
+                                remote,
+                                projectID: projectID,
+                                targetPaths: fallbackPaths
+                            )
+                        }
                         self.patchStore.setBuiltinPatchActive(remote, active: true)
                     }
                     self.setPatchState(for: packageFilename, targetBundleID: targetBundleID, enabled: true)

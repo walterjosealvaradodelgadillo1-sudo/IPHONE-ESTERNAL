@@ -38,8 +38,10 @@ struct FileEntry: Identifiable, Hashable {
 enum ContainerStore {
     static let appDataRoot = "/var/mobile/Containers/Data/Application"
     static let systemDataRoot = "/var/mobile/Containers/Data/System"
+    private static let cacheLock = NSLock()
+    private static var resolvedContainerPathsByBundleID: [String: String] = [:]
     private static var shouldUseBadQuery: Bool {
-        ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26
+        ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 17
     }
     private static let applicationBundleRoots: [(path: String, nested: Bool)] = [
         ("/var/containers/Bundle/Application", true),
@@ -65,44 +67,155 @@ enum ContainerStore {
         guard (try? PatchPathValidator.canonicalBundleIdentifier(bundleID)) == bundleID else {
             return nil
         }
+        cacheLock.lock()
+        let cachedPath = resolvedContainerPathsByBundleID[bundleID]
+        cacheLock.unlock()
+        if let cachedPath, isApplicationContainerPath(cachedPath) {
+            _ = grantContainerAccess(cachedPath)
+            return cachedPath
+        }
+
+        func acceptResolvedPath(_ rawPath: String, source: String) -> String? {
+            let canonical = ContainerDiscoveryMerger.canonicalPath(rawPath)
+            guard isApplicationContainerPath(canonical) else { return nil }
+            _ = grantContainerAccess(rawPath)
+            _ = grantContainerAccess(canonical)
+            cacheLock.lock()
+            resolvedContainerPathsByBundleID[bundleID] = canonical
+            cacheLock.unlock()
+            log("patch: \(source) resolved \(bundleID) -> \(canonical)")
+            return canonical
+        }
+
         var lookupError: NSString?
         if let path = MCMActivateContainerPath(2, bundleID, false, &lookupError),
-           isApplicationContainerPath(path) {
-            log("patch: MHA-C2 resolved \(bundleID)")
-            return path
+           let resolved = acceptResolvedPath(path, source: "MHA-C2") {
+            return resolved
         }
-        let detail = lookupError.map(String.init) ?? "unavailable"
+        var rawLookupError: NSString?
+        if let rawPath = MCMContainerPathForIdentifier(2, bundleID, false, &rawLookupError),
+           let resolved = acceptResolvedPath(rawPath, source: "MCM-Path") {
+            return resolved
+        }
+        let detail = lookupError.map(String.init) ?? rawLookupError.map(String.init) ?? "unavailable"
         log("patch: MHA-C2 could not resolve \(bundleID), detail=\(detail)")
 
-        // Fallback for iOS builds where MCM refuses to hand out sandbox
-        // tokens (e.g. iOS 18.1.x): scan the app-data root with the inode
-        // walk and read each container's MCM metadata plist directly. The
-        // raw reads only succeed when the sandbox escape is active.
-        if let scanned = resolveAppContainerPathByMetadataScan(bundleID: bundleID) {
-            log("patch: filesystem metadata scan resolved \(bundleID)")
-            return scanned
+        if let proxyInfo = appInfoForBundleID(bundleID) as? [String: Any],
+           let proxyContainer = proxyInfo["container"] as? String,
+           let resolved = acceptResolvedPath(proxyContainer, source: "LSApplicationProxy") {
+            return resolved
+        }
+        if let allApps = installedAppInfo() as? [String: [String: Any]],
+           let appEntry = allApps[bundleID],
+           let wsContainer = appEntry["container"] as? String,
+           let resolved = acceptResolvedPath(wsContainer, source: "LSApplicationWorkspace") {
+            return resolved
+        }
+        if let scanned = resolveAppContainerPathByMetadataScan(bundleID: bundleID),
+           let resolved = acceptResolvedPath(scanned, source: "FilesystemScan") {
+            return resolved
         }
         return nil
     }
 
     static func resolveAppContainerPathByMetadataScan(bundleID: String) -> String? {
-        // iOS < 26: kernel R/W is enough, no need to require full sandbox escape
-        if KernelExploit.requiresSandboxEscape, !KernelExploit.hasSandboxAccess() {
-            log("patch: metadata scan skipped — sandbox access not active")
-            return nil
+        let traversed = enumerateDirectoriesWithTraversalGrant(path: appDataRoot)
+        var dirs = traversed.isEmpty ? enumerateDirectories(path: appDataRoot) : traversed
+        if dirs.isEmpty {
+            let privateRoot = "/private" + appDataRoot
+            let privTraversed = enumerateDirectoriesWithTraversalGrant(path: privateRoot)
+            dirs = privTraversed.isEmpty ? enumerateDirectories(path: privateRoot) : privTraversed
         }
-        let dirs = enumerateDirectories(path: appDataRoot)
         guard !dirs.isEmpty else {
             log("patch: metadata scan unavailable — no containers enumerated")
             return nil
         }
+
+        let fm = FileManager.default
+        let isFreeFire = (bundleID == "com.dts.freefireth" || bundleID == "com.dts.freefiremax")
+        let expectedFFAsset = (bundleID == "com.dts.freefiremax")
+            ? "assetindexer.739278~1"
+            : "assetindexer.7176296~1"
+        var freeFireAvatarFallback: String?
+
         for dir in dirs {
-            guard UUID(uuidString: (dir as NSString).lastPathComponent) != nil else { continue }
-            guard let metadata = readContainerMetadata(containerPath: dir),
-                  metadata.bundleID == bundleID else { continue }
+            let uuid = (dir as NSString).lastPathComponent
+            guard UUID(uuidString: uuid) != nil else { continue }
             let canonical = ContainerDiscoveryMerger.canonicalPath(dir)
             guard isApplicationContainerPath(canonical) else { continue }
-            return canonical
+
+            let rootHandle = grantContainerAccess(dir)
+            let metaPath = metadataPath(for: dir)
+            let metaHandle = grantContainerAccess(metaPath)
+            if let metadata = readContainerMetadata(containerPath: dir) {
+                if metaHandle >= 0 { bad_query_release(metaHandle) }
+                if metadata.bundleID == bundleID {
+                    return canonical
+                }
+                if !metadata.bundleID.isEmpty && metadata.bundleID != bundleID {
+                    if rootHandle >= 0 { bad_query_release(rootHandle) }
+                    continue
+                }
+            } else if metaHandle >= 0 {
+                bad_query_release(metaHandle)
+            }
+
+            let libPath = (dir as NSString).appendingPathComponent("Library")
+            let prefsDir = (libPath as NSString).appendingPathComponent("Preferences")
+            let cachesDir = (libPath as NSString).appendingPathComponent("Caches")
+            let savedDir = (libPath as NSString).appendingPathComponent("Saved Application State")
+            let h1 = grantContainerAccess(libPath)
+            let h2 = grantContainerAccess(prefsDir)
+            let h3 = grantContainerAccess(cachesDir)
+            let h4 = grantContainerAccess(savedDir)
+            defer {
+                if h4 >= 0 { bad_query_release(h4) }
+                if h3 >= 0 { bad_query_release(h3) }
+                if h2 >= 0 { bad_query_release(h2) }
+                if h1 >= 0 { bad_query_release(h1) }
+            }
+
+            let markerPaths = [
+                (prefsDir as NSString).appendingPathComponent("\(bundleID).plist"),
+                (cachesDir as NSString).appendingPathComponent(bundleID),
+                (savedDir as NSString).appendingPathComponent("\(bundleID).savedState"),
+                ((libPath as NSString).appendingPathComponent("WebKit") as NSString).appendingPathComponent(bundleID)
+            ]
+            if markerPaths.contains(where: { fm.fileExists(atPath: $0) || access($0, F_OK) == 0 }) {
+                return canonical
+            }
+
+            let fallbackApp = InstalledApp(bundleID: uuid, name: uuid, containerPath: dir, version: "", icon: nil)
+            if let inferred = inferredApp(
+                for: fallbackApp,
+                knownAppsByBundleID: [:],
+                launchServicesIdentifiers: [bundleID]
+            ), inferred.bundleID == bundleID {
+                return canonical
+            }
+
+            if isFreeFire {
+                let avatarDir = (dir as NSString).appendingPathComponent(
+                    "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar"
+                )
+                let hAvatar = grantContainerAccess(avatarDir)
+                defer { if hAvatar >= 0 { bad_query_release(hAvatar) } }
+                let exactAsset = (avatarDir as NSString).appendingPathComponent(expectedFFAsset)
+                if fm.fileExists(atPath: exactAsset) || access(exactAsset, F_OK) == 0 {
+                    return canonical
+                }
+                if fm.fileExists(atPath: avatarDir) || access(avatarDir, F_OK) == 0 {
+                    if freeFireAvatarFallback == nil {
+                        freeFireAvatarFallback = canonical
+                    }
+                }
+            }
+
+            if rootHandle >= 0 { bad_query_release(rootHandle) }
+        }
+        if let freeFireAvatarFallback {
+            _ = grantContainerAccess(freeFireAvatarFallback)
+            return freeFireAvatarFallback
         }
         return nil
     }
@@ -496,8 +609,21 @@ enum ContainerStore {
     static func grantContainerAccess(_ containerPath: String) -> Int64 {
         guard shouldUseBadQuery else { return -1 }
         let clean = containerPath.hasSuffix("/") ? String(containerPath.dropLast()) : containerPath
+        guard !clean.isEmpty else { return -1 }
         var pathC = clean.utf8CString.map { Int8($0) }
-        return bad_query(&pathC, true, nil, false)
+        let primary = bad_query(&pathC, true, nil, false)
+        if clean.hasPrefix("/private/var/") {
+            let alt = String(clean.dropFirst("/private".count))
+            var altC = alt.utf8CString.map { Int8($0) }
+            let secondary = bad_query(&altC, true, nil, false)
+            return primary >= 0 ? primary : secondary
+        } else if clean.hasPrefix("/var/") {
+            let alt = "/private" + clean
+            var altC = alt.utf8CString.map { Int8($0) }
+            let secondary = bad_query(&altC, true, nil, false)
+            return primary >= 0 ? primary : secondary
+        }
+        return primary
     }
 
     static func containersFromFilesystem() -> [InstalledApp] {

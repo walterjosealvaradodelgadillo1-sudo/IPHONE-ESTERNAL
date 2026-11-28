@@ -5246,23 +5246,24 @@ enum EmbeddedAimPackageVault {
         let avatarDirRel = "Documents/contentcache/Compulsory/ios/gameassetbundles/avatar"
         if primaryPath.hasPrefix(avatarDirRel + "/"),
            let containerPath = ContainerStore.resolveAppContainerPath(bundleID: targetBundle) {
-            let primaryFull = (containerPath as NSString).appendingPathComponent(primaryPath)
+            _ = ContainerStore.grantContainerAccess(containerPath)
             let avatarFull = (containerPath as NSString).appendingPathComponent(avatarDirRel)
-            if !FileManager.default.fileExists(atPath: primaryFull),
-               let entries = try? FileManager.default.contentsOfDirectory(atPath: avatarFull) {
-                for entry in entries.sorted() where entry.hasPrefix("assetindexer.") {
+            let hAvatar = ContainerStore.grantContainerAccess(avatarFull)
+            defer { if hAvatar >= 0 { bad_query_release(hAvatar) } }
+            if let entries = try? FileManager.default.contentsOfDirectory(atPath: avatarFull) {
+                for (idx, entry) in entries.sorted().enumerated() where entry.hasPrefix("assetindexer.") && !entry.hasPrefix(".3105-") {
                     let candidateRel = "\(avatarDirRel)/\(entry)"
                     guard candidateRel != primaryPath else { continue }
+                    let ruleUUID = UUID(uuidString: String(format: "8A73AEE3-713D-48F5-95D6-CEEDC4EC%04X", (idx + 1) & 0xFFFF)) ?? UUID()
                     rules.append(
                         PatchRule(
-                            id: UUID(uuidString: "8A73AEE3-713D-48F5-95D6-CEEDC4ECDDB1") ?? UUID(),
+                            id: ruleUUID,
                             bundleID: targetBundle,
                             relativePath: candidateRel,
                             replacementFilename: entry,
                             replacementData: effectiveReplacementData
                         )
                     )
-                    break
                 }
             }
         }

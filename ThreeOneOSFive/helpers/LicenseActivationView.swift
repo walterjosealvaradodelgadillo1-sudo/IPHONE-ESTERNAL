@@ -709,26 +709,28 @@ struct LoginBackdrop: View {
     @State private var drift = false
 
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color.black, Color(red: 0.03, green: 0.03, blue: 0.05), Color.black],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            Circle()
-                .fill(AppTheme.accent.opacity(0.14))
-                .frame(width: 270, height: 270)
-                .blur(radius: 56)
-                .offset(x: drift ? 138 : -128, y: drift ? -265 : -205)
-
-            Circle()
-                .fill(Color(red: 0.22, green: 0.94, blue: 0.62).opacity(0.08))
-                .frame(width: 230, height: 230)
-                .blur(radius: 54)
-                .offset(x: drift ? -130 : 118, y: drift ? 285 : 225)
+        GeometryReader { geo in
+            ZStack {
+                Color.black
+                if let bgImage = UIImage(named: "WalterBackdrop") {
+                    Image(uiImage: bgImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                }
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.42),
+                        Color.black.opacity(0.20),
+                        Color.black.opacity(0.52)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
-        .animation(.easeInOut(duration: 8).repeatForever(autoreverses: true), value: drift)
-        .onAppear { drift = true }
+        .ignoresSafeArea()
     }
 }

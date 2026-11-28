@@ -1739,14 +1739,29 @@ private struct PatchUnlockPrompt: View {
 
 struct AnimatedHyperBackdrop: View {
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [AppTheme.pageBackground, Color.black, AppTheme.consoleBackground],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            RadialGradient(colors: [AppTheme.accent.opacity(0.12), .clear], center: .topTrailing, startRadius: 8, endRadius: 260)
+        GeometryReader { geo in
+            ZStack {
+                Color.black
+                if let bgImage = UIImage(named: "WalterBackdrop") {
+                    Image(uiImage: bgImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                }
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.36),
+                        Color.black.opacity(0.18),
+                        Color.black.opacity(0.46)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
+        .ignoresSafeArea()
     }
 }
 

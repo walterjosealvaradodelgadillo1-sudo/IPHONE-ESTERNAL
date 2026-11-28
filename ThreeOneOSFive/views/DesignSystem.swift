@@ -5,7 +5,7 @@ enum AppTheme {
     static let secondaryAccent = Color.white
     static let pageBackground = Color.black
     static let consoleBackground = Color.black
-    static let referenceCard = Color.black
+    static let referenceCard = Color.black.opacity(0.62)
     static let paper = Color.white
     static let ink = Color.black
     static let pageInset: CGFloat = 16
